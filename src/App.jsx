@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
+import QuizRouting from './QuizRouting';
 
 const diseaseOptions = [
   { key: 'diabetes', label: 'Diabetes', icon: 'D' },
@@ -102,6 +103,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [activeView, setActiveView] = useState('kits');
 
   async function load() {
     setLoading(true); setError('');
@@ -199,16 +201,17 @@ export default function App() {
     <div className="app-shell">
       <aside className="rail">
         <div className="brand-mark">m<span>u</span></div>
-        <nav><button className="active"><Icon name="grid"/></button><button><Icon name="box"/></button><button><Icon name="spark"/></button></nav>
+        <nav><button className={activeView === 'kits' ? 'active' : ''} onClick={() => setActiveView('kits')} aria-label="Kit Studio"><Icon name="grid"/></button><button className={activeView === 'routing' ? 'active' : ''} onClick={() => setActiveView('routing')} aria-label="Quiz and routing"><Icon name="spark"/></button></nav>
         <div className="profile-dot">AN</div>
       </aside>
 
       <main className="workspace">
         <header className="topbar">
-          <div><span className="eyebrow">METABOLIC CARE / KIT MANAGEMENT</span><h1>Kit Studio</h1><p>Compose precise care kits from your live product catalogue.</p></div>
-          <div className="header-actions"><button className="secondary-button" onClick={load}><Icon name="refresh"/>Refresh</button><button className="primary-button" onClick={() => setEditor(blankEditor())}><Icon name="plus"/>Create new kit</button></div>
+          <div><span className="eyebrow">{activeView === 'kits' ? 'METABOLIC CARE / KIT MANAGEMENT' : 'ASSESSMENT INTELLIGENCE / KIT ROUTING'}</span><h1>{activeView === 'kits' ? 'Kit Studio' : 'Quiz & routing'}</h1><p>{activeView === 'kits' ? 'Compose precise care kits from your live product catalogue.' : 'Tune how each answer guides a member toward the right disease pathway and kit.'}</p></div>
+          <div className="header-actions"><button className="secondary-button" onClick={load}><Icon name="refresh"/>Refresh</button>{activeView === 'kits' && <button className="primary-button" onClick={() => setEditor(blankEditor())}><Icon name="plus"/>Create new kit</button>}</div>
         </header>
 
+        {activeView === 'routing' ? <QuizRouting onToast={setToast}/> : <>
         <section className="metrics-row">
           <div className="metric-card accent"><span>Active kits</span><strong>{metrics.active}</strong><small>of {kits.length} total</small></div>
           <div className="metric-card"><span>Disease combinations</span><strong>{metrics.combinations}</strong><small>personalized pathways</small></div>
@@ -273,6 +276,7 @@ export default function App() {
             <footer className="editor-footer"><div><span>{editor._id ? 'Last changes are saved to the live database' : 'A new kit will be added to this combination'}</span></div><button className="save-button" onClick={saveKit} disabled={saving}>{saving ? <span className="spinner"/> : <Icon name="check"/>}{saving ? 'Saving...' : editor._id ? 'Save changes' : 'Create kit'}<Icon name="chevron" size={16}/></button></footer>
           </section>
         </section>
+        </>}
       </main>
       {toast && <div className="toast"><Icon name="check"/><span>{toast}</span></div>}
     </div>
