@@ -8,7 +8,7 @@ const diseaseOptions = [
   { key: 'kidney', label: 'Kidney', icon: 'K' },
   { key: 'heart', label: 'Heart', icon: 'H' },
 ];
-
+//blank
 const blankEditor = () => ({
   _id: null, name: '', kitNumber: '', diseases: ['diabetes'], pricingMode: 'manual',
   price: '', active: true, products: [],
