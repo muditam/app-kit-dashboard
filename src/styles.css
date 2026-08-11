@@ -281,12 +281,15 @@ button { color: inherit; }
 .live-preview strong { font-size: 11px; }
 .live-preview small { color: #789185; font-size: 8px; }
 .route-table { border: 1px solid #e5e5dd; border-radius: 14px; overflow: hidden; background: #fff; }
-.route-table-head, .route-row { display: grid; grid-template-columns: 1.05fr 1.15fr 1.3fr .7fr; gap: 10px; align-items: center; }
+.route-table-head, .route-row { display: grid; grid-template-columns: 1.05fr 1.15fr 1.15fr 1.25fr .65fr; gap: 10px; align-items: center; }
 .route-table-head { padding: 10px 12px; background: #f7f6f0; color: #909991; font: 800 7px Manrope; letter-spacing: .1em; }
 .route-row { padding: 11px 12px; border-top: 1px solid #efeee8; min-height: 65px; }
 .answer-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .answer-index { flex: 0 0 auto; width: 23px; height: 23px; border-radius: 7px; background: #ede8f5; color: #4a1d5c; display: grid; place-items: center; font: 800 9px Manrope; }
 .answer-cell input, .kit-cell input { min-width: 0; width: 100%; border: 0; outline: 0; background: #fbfaf6; border-radius: 8px; padding: 8px; font-size: 10px; }
+.rule-cell select { width: 100%; border: 1px solid #e5e5dd; border-radius: 8px; background: #fff; padding: 7px; font-size: 9px; }
+.range-inputs { display: grid; grid-template-columns: 1fr 1fr 42px; gap: 4px; margin-top: 5px; }
+.range-inputs input { min-width: 0; width: 100%; border: 1px solid #e5e5dd; border-radius: 6px; padding: 5px; font-size: 8px; outline: 0; }
 .pathway-cell select { width: 100%; border: 1px solid #e5e5dd; border-radius: 8px; background: #fff; padding: 7px; font-size: 9px; }
 .pathway-chip { color: #2d7a57; font-size: 8px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pathway-chip i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #4eaa76; }
@@ -317,5 +320,5 @@ button { color: inherit; }
   .influence-header { display: block; }
   .live-preview { margin-top: 12px; }
   .route-table { overflow-x: auto; }
-  .route-table-head, .route-row { min-width: 730px; }
+  .route-table-head, .route-row { min-width: 900px; }
 }

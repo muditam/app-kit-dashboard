@@ -54,7 +54,7 @@ function ProductCard({ product, onAdd }) {
     </article>
   );
 }
-
+//done
 function KitCard({ kit, selected, onSelect, onStatus }) {
   const pictures = kit.products?.slice(0, 3) || [];
   return (
