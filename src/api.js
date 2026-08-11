@@ -18,4 +18,7 @@ export const api = {
   setKitStatus: (id, active) => request(`/kits/${id}/status`, { method: 'PATCH', body: JSON.stringify({ active }) }),
   getQuizQuestions: () => request('/quiz-questions'),
   updateQuizQuestion: (id, question) => request(`/quiz-questions/${id}`, { method: 'PATCH', body: JSON.stringify(question) }),
+  getRules: () => request('/rules'),
+  createRule: (rule) => request('/rules', { method: 'POST', body: JSON.stringify(rule) }),
+  updateRule: (id, rule) => request(`/rules/${id}`, { method: 'PATCH', body: JSON.stringify(rule) }),
 };
