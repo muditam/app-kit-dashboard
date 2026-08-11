@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
 import QuizRouting from './QuizRouting';
 import RuleEngine from './RuleEngine';
+import MonthlyJourneys from './MonthlyJourneys';
 
 const diseaseOptions = [
   { key: 'diabetes', label: 'Diabetes', icon: 'D' },
@@ -11,7 +12,7 @@ const diseaseOptions = [
 ];
 //blank
 const blankEditor = () => ({
-  _id: null, name: '', kitNumber: '', diseases: ['diabetes'], pricingMode: 'manual',
+  _id: null, name: '', kitNumber: '', monthNumber: '', diseases: ['diabetes'], pricingMode: 'manual',
   price: '', active: true, products: [],
 });
 
@@ -32,6 +33,7 @@ function Icon({ name, size = 18 }) {
     check: <path d="m5 12 4 4L19 6"/>,
     refresh: <><path d="M20 7v5h-5"/><path d="M19 12a7 7 0 1 1-2-5"/></>,
     shield: <><path d="M12 3 20 6v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z"/><path d="m9 12 2 2 4-4"/></>,
+    timeline: <><path d="M6 3v18M6 7h8l3 3-3 3H6M6 16h5l3 2-3 2H6"/></>,
   };
   return <svg className="icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -66,6 +68,7 @@ function KitCard({ kit, selected, onSelect, onStatus }) {
         <button className={`mini-toggle ${kit.active ? 'on' : ''}`} onClick={(event) => { event.stopPropagation(); onStatus(!kit.active); }} aria-label="Toggle kit status"><span /></button>
       </div>
       <h3>{kit.name}</h3>
+      <div className="kit-month-label">Month {kit.monthNumber || kit.kitNumber}</div>
       <div className="disease-row">{(kit.diseases || []).map((disease) => <span key={disease}>{disease}</span>)}</div>
       <div className="kit-card-bottom">
         <div className="avatar-stack">
@@ -100,6 +103,8 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [kitFilter, setKitFilter] = useState('all');
+  const [kitSearch, setKitSearch] = useState('');
+  const [kitCombination, setKitCombination] = useState('all');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -125,13 +130,19 @@ export default function App() {
     const matchesSearch = `${product.name} ${product.sku || ''}`.toLowerCase().includes(search.toLowerCase());
     return matchesSearch && (category === 'all' || product.category === category);
   }), [products, search, category]);
-  const filteredKits = useMemo(() => kits.filter((kit) => kitFilter === 'all' || (kit.active ? 'active' : 'inactive') === kitFilter), [kits, kitFilter]);
+  const kitCombinations = useMemo(() => [...new Map(kits.map((kit) => [kit.conditionKey, kit.condition])).entries()], [kits]);
+  const filteredKits = useMemo(() => kits.filter((kit) => {
+    const statusMatch = kitFilter === 'all' || (kit.active ? 'active' : 'inactive') === kitFilter;
+    const combinationMatch = kitCombination === 'all' || kit.conditionKey === kitCombination;
+    const searchMatch = `${kit.name} ${kit.slug} ${kit.condition}`.toLowerCase().includes(kitSearch.toLowerCase());
+    return statusMatch && combinationMatch && searchMatch;
+  }).sort((a, b) => a.conditionKey.localeCompare(b.conditionKey) || (a.monthNumber || a.kitNumber) - (b.monthNumber || b.kitNumber)), [kits, kitFilter, kitCombination, kitSearch]);
   const calculatedTotal = useMemo(() => editor.products.reduce((total, item) => total + (Number(item.product?.unitPrice) || 0) * item.quantity, 0), [editor.products]);
   const missingPrice = editor.products.some((item) => item.product?.unitPrice == null);
 
   function selectKit(kit) {
     setEditor({
-      _id: kit._id, name: kit.name, kitNumber: kit.kitNumber, diseases: kit.diseaseKeys || ['diabetes'],
+      _id: kit._id, name: kit.name, kitNumber: kit.kitNumber, monthNumber: kit.monthNumber || kit.kitNumber, diseases: kit.diseaseKeys || ['diabetes'],
       pricingMode: kit.pricingMode || 'manual', price: kit.price, active: kit.active,
       products: (kit.products || []).map((item) => ({ product: item.product, quantity: item.quantity })),
     });
@@ -172,7 +183,7 @@ export default function App() {
     setSaving(true);
     try {
       const payload = {
-        name: editor.name, kitNumber: editor.kitNumber ? Number(editor.kitNumber) : undefined,
+        name: editor.name, monthNumber: editor.monthNumber ? Number(editor.monthNumber) : undefined,
         diseases: editor.diseases, pricingMode: editor.pricingMode,
         price: editor.pricingMode === 'calculated' ? calculatedTotal : Number(editor.price), active: editor.active,
         products: editor.products.map((item) => ({ product: item.product._id, quantity: item.quantity })),
@@ -203,17 +214,17 @@ export default function App() {
     <div className="app-shell">
       <aside className="rail">
         <div className="brand-mark">m<span>u</span></div>
-        <nav><button className={activeView === 'kits' ? 'active' : ''} onClick={() => setActiveView('kits')} aria-label="Kit Studio"><Icon name="grid"/></button><button className={activeView === 'routing' ? 'active' : ''} onClick={() => setActiveView('routing')} aria-label="Quiz and routing"><Icon name="spark"/></button><button className={activeView === 'rules' ? 'active' : ''} onClick={() => setActiveView('rules')} aria-label="Rules Studio"><Icon name="shield"/></button></nav>
+        <nav><button className={activeView === 'kits' ? 'active' : ''} onClick={() => setActiveView('kits')} aria-label="Kit Studio"><Icon name="grid"/></button><button className={activeView === 'journeys' ? 'active' : ''} onClick={() => setActiveView('journeys')} aria-label="Monthly journeys"><Icon name="timeline"/></button><button className={activeView === 'routing' ? 'active' : ''} onClick={() => setActiveView('routing')} aria-label="Quiz and routing"><Icon name="spark"/></button><button className={activeView === 'rules' ? 'active' : ''} onClick={() => setActiveView('rules')} aria-label="Rules Studio"><Icon name="shield"/></button></nav>
         <div className="profile-dot">AN</div>
       </aside>
 
       <main className="workspace">
         <header className="topbar">
-          <div><span className="eyebrow">{activeView === 'kits' ? 'METABOLIC CARE / KIT MANAGEMENT' : activeView === 'routing' ? 'ASSESSMENT INTELLIGENCE / KIT ROUTING' : 'DECISION ENGINE / RECOMMENDATION RULES'}</span><h1>{activeView === 'kits' ? 'Kit Studio' : activeView === 'routing' ? 'Quiz & routing' : 'Rules & guardrails'}</h1><p>{activeView === 'kits' ? 'Compose precise care kits from your live product catalogue.' : activeView === 'routing' ? 'Tune how each answer guides a member toward the right disease pathway and kit.' : 'Define the safeguards, overrides and constraints applied to every recommendation.'}</p></div>
+          <div><span className="eyebrow">{activeView === 'kits' ? 'METABOLIC CARE / KIT MANAGEMENT' : activeView === 'journeys' ? 'CARE PROGRAMS / MONTHLY SEQUENCING' : activeView === 'routing' ? 'ASSESSMENT INTELLIGENCE / KIT ROUTING' : 'DECISION ENGINE / RECOMMENDATION RULES'}</span><h1>{activeView === 'kits' ? 'Kit Studio' : activeView === 'journeys' ? 'Treatment journeys' : activeView === 'routing' ? 'Quiz & routing' : 'Rules & guardrails'}</h1><p>{activeView === 'kits' ? 'Compose precise care kits from your live product catalogue.' : activeView === 'journeys' ? 'Arrange each disease pathway into a clear month-by-month care program.' : activeView === 'routing' ? 'Tune how each answer guides a member toward the right disease pathway and kit.' : 'Define the safeguards, overrides and constraints applied to every recommendation.'}</p></div>
           <div className="header-actions">{activeView === 'kits' && <><button className="secondary-button" onClick={load}><Icon name="refresh"/>Refresh</button><button className="primary-button" onClick={() => setEditor(blankEditor())}><Icon name="plus"/>Create new kit</button></>}</div>
         </header>
 
-        {activeView === 'rules' ? <RuleEngine onToast={setToast}/> : activeView === 'routing' ? <QuizRouting onToast={setToast}/> : <>
+        {activeView === 'rules' ? <RuleEngine onToast={setToast}/> : activeView === 'journeys' ? <MonthlyJourneys kits={kits} onKitsChange={setKits} onToast={setToast}/> : activeView === 'routing' ? <QuizRouting onToast={setToast}/> : <>
         <section className="metrics-row">
           <div className="metric-card accent"><span>Active kits</span><strong>{metrics.active}</strong><small>of {kits.length} total</small></div>
           <div className="metric-card"><span>Disease combinations</span><strong>{metrics.combinations}</strong><small>personalized pathways</small></div>
@@ -238,11 +249,13 @@ export default function App() {
 
           <section className="panel kit-library">
             <div className="panel-heading"><div><span className="step">02</span><h2>Existing kits</h2></div></div>
+            <label className="search-box kit-search-box"><Icon name="search"/><input value={kitSearch} onChange={(event) => setKitSearch(event.target.value)} placeholder="Search kit name or disease..."/></label>
+            <select className="kit-combination-select" value={kitCombination} onChange={(event) => setKitCombination(event.target.value)}><option value="all">All disease combinations</option>{kitCombinations.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
             <div className="segmented small">
               {['all', 'active', 'inactive'].map((item) => <button key={item} className={kitFilter === item ? 'selected' : ''} onClick={() => setKitFilter(item)}>{item}</button>)}
             </div>
             <div className="kit-list">
-              {loading ? [...Array(4)].map((_, index) => <div className="skeleton kit-skeleton" key={index}/>) : filteredKits.map((kit) => <KitCard key={kit._id} kit={kit} selected={editor._id === kit._id} onSelect={() => selectKit(kit)} onStatus={(active) => setStatus(kit, active)}/>)}
+              {loading ? [...Array(4)].map((_, index) => <div className="skeleton kit-skeleton" key={index}/>) : [...new Map(filteredKits.map((kit) => [kit.conditionKey, kit.condition])).entries()].map(([conditionKey, condition]) => <div className="kit-condition-group" key={conditionKey}><div className="kit-group-heading"><strong>{condition}</strong><span>{filteredKits.filter((kit) => kit.conditionKey === conditionKey).length} months</span></div>{filteredKits.filter((kit) => kit.conditionKey === conditionKey).map((kit) => <KitCard key={kit._id} kit={kit} selected={editor._id === kit._id} onSelect={() => selectKit(kit)} onStatus={(active) => setStatus(kit, active)}/>)}</div>)}
               {!loading && !filteredKits.length && <div className="empty-state"><Icon name="box" size={28}/><strong>No kits here yet</strong><span>Create one from the product library.</span></div>}
             </div>
           </section>
@@ -256,6 +269,7 @@ export default function App() {
             <div className="editor-section disease-section">
               <div className="section-title"><span>Disease combination</span><small>Select every condition this kit supports</small></div>
               <div className="disease-picker">{diseaseOptions.map((option) => <button key={option.key} className={editor.diseases.includes(option.key) ? 'selected' : ''} onClick={() => toggleDisease(option.key)}><i>{option.icon}</i>{option.label}{editor.diseases.includes(option.key) && <Icon name="check" size={15}/>}</button>)}</div>
+              <label className="month-number-field"><span><b>Delivery month</b><small>Which month of this disease journey?</small></span><div>MONTH <input type="number" min="1" value={editor.monthNumber} onChange={(event) => setEditor({ ...editor, monthNumber: event.target.value })} placeholder="Auto"/></div></label>
             </div>
 
             <div className="editor-section">
