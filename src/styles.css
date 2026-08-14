@@ -278,6 +278,23 @@ button { color: inherit; }
 @media(max-width:760px){.journey-hero{display:block;padding:20px}.journey-stat{margin-top:15px}.journey-board>header{align-items:flex-start;flex-direction:column}.journey-board header label{width:100%}.journey-timeline{padding:13px 8px}.journey-row{grid-template-columns:48px 20px 1fr}.journey-kit{grid-template-columns:20px 1fr 60px;height:auto}.journey-status{display:none}.journey-arrows{grid-column:3}.journey-board>footer span{display:none}.journey-board>footer button{width:100%}.month-number-field{align-items:flex-start;flex-direction:column}}
 
 .quiz-routing-page { display: grid; gap: 16px; }
+
+/* Expandable product details in the month-by-month treatment journey. */
+.journey-kit { height: auto; min-height: 73px; margin:5px }
+.journey-kit:hover, .journey-kit.expanded { border-color: #91b8a2; box-shadow: 0 8px 20px rgba(35,91,67,.08); }
+.journey-kit-copy { min-width: 0; width: 100%; display: grid; gap: 3px; padding: 0; border: 0; background: transparent; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.journey-kit-copy span b { color: #34785a; font-size: 7px; margin-left: 4px; font-weight: 800; }
+.journey-kit-products { grid-column: 1 / -1; border-top: 1px solid #edf0eb; padding: 10px 2px 2px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.journey-product { min-width: 0; display: flex; align-items: center; gap: 8px; border: 1px solid #edf0eb; border-radius: 10px; background: #fafcf9; padding: 7px; }
+.journey-product img, .journey-product-fallback { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 8px; object-fit: contain; background: #f0f5ef; }
+.journey-product-fallback { display: grid; place-items: center; color: #3d775d; font: 800 13px Manrope; }
+.journey-product > div:last-child { min-width: 0; display: grid; gap: 2px; }
+.journey-product strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 9px; }
+.journey-product span { color: #8b968f; font-size: 8px; }
+.journey-no-products { grid-column: 1 / -1; color: #8b968f; font-size: 9px; padding: 5px; }
+@media(max-width:760px) {
+  .journey-kit-products { grid-template-columns: 1fr; }
+}
 .routing-summary { background: linear-gradient(135deg, #173a2f, #2c6751); border-radius: 22px; padding: 24px 26px; color: #fff; display: flex; justify-content: space-between; gap: 24px; }
 .routing-summary .eyebrow { color: #f1a373; }
 .routing-summary h2 { margin: 0; font: 800 30px/1 Manrope; letter-spacing: -.04em; }
