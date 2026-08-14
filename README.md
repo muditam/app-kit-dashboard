@@ -9,3 +9,7 @@ Interactive React dashboard for managing metabolic kits.
 3. Run `npm run dev` and open `http://localhost:5173`.
 
 The dashboard API base URL is configured in `.env` with `VITE_API_BASE_URL`.
+
+The Video Library tab uses `VITE_ADMIN_API_BASE_URL`. It appends
+`/video-library` for the backend module endpoints and uploads video bytes
+directly to the presigned Wasabi URL returned by the backend.
