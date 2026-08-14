@@ -9,6 +9,7 @@ export default function MonthlyJourneys({ kits, onKitsChange, onToast }) {
   const [ordered, setOrdered] = useState([]);
   const [search, setSearch] = useState('');
   const [draggedId, setDraggedId] = useState('');
+  const [expandedKits, setExpandedKits] = useState(() => new Set());
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -38,6 +39,13 @@ export default function MonthlyJourneys({ kits, onKitsChange, onToast }) {
       const next = [...current]; [next[index], next[destination]] = [next[destination], next[index]]; return next;
     }); setDirty(true);
   }
+  function toggleKit(id) {
+    setExpandedKits((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
   async function save() {
     setSaving(true);
     try {
@@ -58,8 +66,8 @@ export default function MonthlyJourneys({ kits, onKitsChange, onToast }) {
         <header><div><span className="step">02</span><div><small>MONTH-BY-MONTH PLAN</small><h3>{combinations.find(([key]) => key === selected)?.[1] || 'Disease journey'}</h3></div></div><label><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search kits in this journey..."/></label></header>
         {search && <div className="journey-search-note">Clear search to rearrange the complete journey safely.</div>}
         <div className="journey-timeline">
-          {shown.map((kit) => { const month = ordered.findIndex((item) => item._id === kit._id) + 1; return <div key={kit._id} className={`journey-row ${draggedId === kit._id ? 'dragging' : ''}`} draggable={!search} onDragStart={() => setDraggedId(kit._id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveBefore(kit._id)}>
-            <div className="month-marker"><span>MONTH</span><strong>{String(month).padStart(2, '0')}</strong></div><div className="timeline-line"><i/></div><div className="journey-kit"><span className="journey-grip">⋮⋮</span><div className="journey-kit-copy"><small>{kit.slug}</small><strong>{kit.name}</strong><span>{kit.products?.length || 0} products · {money(kit.price)}</span></div><div className="journey-status"><i className={kit.active ? 'active' : ''}/>{kit.active ? 'Active' : 'Inactive'}</div><div className="journey-arrows"><button disabled={month === 1 || Boolean(search)} onClick={() => nudge(kit._id, -1)}>↑</button><button disabled={month === ordered.length || Boolean(search)} onClick={() => nudge(kit._id, 1)}>↓</button></div></div>
+          {shown.map((kit) => { const month = ordered.findIndex((item) => item._id === kit._id) + 1; const expanded = expandedKits.has(kit._id); return <div key={kit._id} className={`journey-row ${draggedId === kit._id ? 'dragging' : ''}`} draggable={!search} onDragStart={() => setDraggedId(kit._id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveBefore(kit._id)}>
+            <div className="month-marker"><span>MONTH</span><strong>{String(month).padStart(2, '0')}</strong></div><div className="timeline-line"><i/></div><div className={`journey-kit ${expanded ? 'expanded' : ''} `}><span className="journey-grip">⋮⋮</span><button className="journey-kit-copy" onClick={(event) => { event.stopPropagation(); toggleKit(kit._id); }} aria-expanded={expanded}><small>{kit.slug}</small><strong>{kit.name}</strong><span>{kit.products?.length || 0} products · {money(kit.price)} <b>{expanded ? '⌃ Hide products' : '⌄ View products'}</b></span></button><div className="journey-status"><i className={kit.active ? 'active' : ''}/>{kit.active ? 'Active' : 'Inactive'}</div><div className="journey-arrows"><button disabled={month === 1 || Boolean(search)} onClick={(event) => { event.stopPropagation(); nudge(kit._id, -1); }}>↑</button><button disabled={month === ordered.length || Boolean(search)} onClick={(event) => { event.stopPropagation(); nudge(kit._id, 1); }}>↓</button></div>{expanded && <div className="journey-kit-products">{kit.products?.length ? kit.products.map((item, index) => <div className="journey-product" key={item.product?._id || index}>{item.product?.image ? <img src={item.product.image} alt=""/> : <div className="journey-product-fallback">{item.product?.name?.slice(0, 1) || '?'}</div>}<div><strong>{item.product?.name || 'Unnamed product'}</strong><span>Quantity · {item.quantity || 1}</span></div></div>) : <span className="journey-no-products">No products have been added to this kit.</span>}</div>}</div>
           </div>; })}
           {!shown.length && <div className="journey-empty">No kits found in this disease combination.</div>}
         </div>
