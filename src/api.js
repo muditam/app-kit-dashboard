@@ -17,6 +17,8 @@ export const api = {
   updateKit: (id, kit) => request(`/kits/${id}`, { method: 'PATCH', body: JSON.stringify(kit) }),
   setKitStatus: (id, active) => request(`/kits/${id}/status`, { method: 'PATCH', body: JSON.stringify({ active }) }),
   updateKitJourney: (conditionKey, orderedKitIds) => request(`/kit-journeys/${conditionKey}`, { method: 'PATCH', body: JSON.stringify({ orderedKitIds }) }),
+  getUserAssessments: (params = {}) => request(`/user-assessments?${new URLSearchParams(params).toString()}`),
+  getUserAssessment: (phone) => request(`/user-assessments/${encodeURIComponent(phone)}`),
   getQuizQuestions: () => request('/quiz-questions'),
   updateQuizQuestion: (id, question) => request(`/quiz-questions/${id}`, { method: 'PATCH', body: JSON.stringify(question) }),
   getRules: () => request('/rules'),
