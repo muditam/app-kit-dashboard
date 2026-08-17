@@ -45,6 +45,7 @@ export default function VideoLibrary({ onToast }) {
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
+  const [preview, setPreview] = useState(null);
 
   const publishedCount = useMemo(() => videos.filter((video) => video.status === 'published').length, [videos]);
   const readyCount = useMemo(() => videos.filter((video) => video.status === 'ready').length, [videos]);
@@ -127,6 +128,14 @@ export default function VideoLibrary({ onToast }) {
     } catch (actionError) { setError(actionError.message); }
   }
 
+  async function openPreview(video) {
+    setError('');
+    try {
+      const playback = await videoApi.getPlaybackUrl(video.id);
+      setPreview({ ...video, ...playback });
+    } catch (previewError) { setError(previewError.message); }
+  }
+
   return <div className="video-admin">
     <section className="video-metrics">
       <article className="video-metric featured"><span>Total classes</span><strong>{videos.length}</strong><small>across every status</small></article>
@@ -167,11 +176,18 @@ export default function VideoLibrary({ onToast }) {
           {loading ? [...Array(4)].map((_, index) => <div className="video-row-skeleton" key={index}/>) : videos.map((video) => <article className="video-row" key={video.id}>
             <div className="video-row-icon">▶</div>
             <div className="video-row-copy"><div><h3>{video.title}</h3><span className={`video-status ${video.status}`}>{statusLabel(video.status)}</span></div><p>{video.instructorName || 'Muditam instructor'} · {video.category} · {minutes(video.durationSeconds)}</p><small>{video.publishedAt ? `Published ${new Date(video.publishedAt).toLocaleDateString('en-IN')}` : 'Not currently published'}</small></div>
-            <div className="video-row-actions">{video.status === 'ready' && <button className="video-publish-button" onClick={() => publish(video)}>Publish</button>}{video.status !== 'archived' && <button className="video-archive-button" onClick={() => archive(video)}>Archive</button>}</div>
+            <div className="video-row-actions">{['ready', 'published'].includes(video.status) && <button className="video-preview-button" onClick={() => openPreview(video)}>Preview</button>}{video.status === 'ready' && <button className="video-publish-button" onClick={() => publish(video)}>Publish</button>}{video.status !== 'archived' && <button className="video-archive-button" onClick={() => archive(video)}>Archive</button>}</div>
           </article>)}
           {!loading && !videos.length && <div className="video-empty"><span>▶</span><strong>No uploaded videos</strong><p>Create the first prerecorded class using the form.</p></div>}
         </div>
       </section>
     </div>
+    {preview && <div className="video-preview-backdrop" role="presentation" onClick={() => setPreview(null)}>
+      <section className="video-preview-modal" role="dialog" aria-modal="true" aria-label={`Preview ${preview.title}`} onClick={(event) => event.stopPropagation()}>
+        <div className="video-preview-header"><div><small>PRIVATE WASABI PREVIEW</small><h2>{preview.title}</h2></div><button className="video-preview-close" onClick={() => setPreview(null)} aria-label="Close preview">×</button></div>
+        <video className="video-preview-player" controls playsInline preload="metadata" crossOrigin="anonymous" src={preview.playbackUrl} />
+        <p className="video-preview-note">This temporary playback link expires in {Math.round(Number(preview.expiresInSeconds || 0) / 60)} minutes.</p>
+      </section>
+    </div>}
   </div>;
 }

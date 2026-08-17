@@ -34,6 +34,7 @@ function putFile(url, file, requiredHeaders, onProgress) {
 
 export const videoApi = {
   getClasses: () => request('/classes'),
+  getPlaybackUrl: (videoClassId) => request(`/classes/${videoClassId}/playback`),
   createClass: (payload) => request('/classes', { method: 'POST', body: JSON.stringify(payload) }),
   createUpload: (videoClassId, payload) => request(`/classes/${videoClassId}/assets/uploads`, {
     method: 'POST', body: JSON.stringify(payload),
