@@ -82,6 +82,10 @@ export default function Reels({ onToast }) {
   async function submit(event) {
     event.preventDefault();
     if (!file || !metadata) return setError('Select a valid MP4 reel first.');
+    // React clears currentTarget after the synchronous event handler returns.
+    // Keep the form reference before awaiting the upload requests so the
+    // native file input can be reset after a successful upload.
+    const formElement = event.currentTarget;
     setSubmitting(true); setProgress(0); setError('');
     try {
       const created = await reelApi.create({ ...form, tags: form.tags });
@@ -91,8 +95,9 @@ export default function Reels({ onToast }) {
       await reelApi.completeUpload(reelId, upload.asset.id, metadata);
       if (form.publish) await reelApi.publish(reelId, upload.asset.id);
       setForm(initialForm); setFile(null); setMetadata(null); setProgress(0);
-      event.currentTarget.reset();
+      formElement.reset();
       onToast?.(form.publish ? 'Reel uploaded and published' : 'Reel uploaded and ready');
+      // Refresh the library after publish so the new item appears immediately.
       await load(reelId);
     } catch (submitError) { setError(submitError.message); }
     finally { setSubmitting(false); }
