@@ -4,6 +4,8 @@ import QuizRouting from './QuizRouting';
 import RuleEngine from './RuleEngine';
 import MonthlyJourneys from './MonthlyJourneys';
 import UserAssessments from './UserAssessments';
+import VideoLibrary from './VideoLibrary';
+import Reels from './Reels';
 
 const diseaseOptions = [
   { key: 'diabetes', label: 'Diabetes', icon: 'D' },
@@ -36,6 +38,8 @@ function Icon({ name, size = 18 }) {
     shield: <><path d="M12 3 20 6v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z"/><path d="m9 12 2 2 4-4"/></>,
     timeline: <><path d="M6 3v18M6 7h8l3 3-3 3H6M6 16h5l3 2-3 2H6"/></>,
     users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
+    video: <><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3V9Z"/></>,
+    reel: <><rect x="6" y="2" width="12" height="20" rx="3"/><path d="m10 8 5 4-5 4V8Z"/><path d="M10 5h4"/></>,
   };
   return <svg className="icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -216,17 +220,17 @@ export default function App() {
     <div className="app-shell">
       <aside className="rail">
         <div className="brand-mark">m<span>u</span></div>
-        <nav><button className={activeView === 'kits' ? 'active' : ''} onClick={() => setActiveView('kits')} aria-label="Kit Studio"><Icon name="grid"/></button><button className={activeView === 'journeys' ? 'active' : ''} onClick={() => setActiveView('journeys')} aria-label="Monthly journeys"><Icon name="timeline"/></button><button className={activeView === 'routing' ? 'active' : ''} onClick={() => setActiveView('routing')} aria-label="Quiz and routing"><Icon name="spark"/></button><button className={activeView === 'rules' ? 'active' : ''} onClick={() => setActiveView('rules')} aria-label="Rules Studio"><Icon name="shield"/></button><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')} aria-label="User assessments"><Icon name="users"/></button></nav>
+        <nav><button className={activeView === 'kits' ? 'active' : ''} onClick={() => setActiveView('kits')} aria-label="Kit Studio"><Icon name="grid"/></button><button className={activeView === 'journeys' ? 'active' : ''} onClick={() => setActiveView('journeys')} aria-label="Monthly journeys"><Icon name="timeline"/></button><button className={activeView === 'routing' ? 'active' : ''} onClick={() => setActiveView('routing')} aria-label="Quiz and routing"><Icon name="spark"/></button><button className={activeView === 'rules' ? 'active' : ''} onClick={() => setActiveView('rules')} aria-label="Rules Studio"><Icon name="shield"/></button><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')} aria-label="User assessments"><Icon name="users"/></button><button className={activeView === 'videos' ? 'active' : ''} onClick={() => setActiveView('videos')} aria-label="Class video library"><Icon name="video"/></button><button className={activeView === 'reels' ? 'active' : ''} onClick={() => setActiveView('reels')} aria-label="Reels studio"><Icon name="reel"/></button></nav>
         <div className="profile-dot">AN</div>
       </aside>
 
       <main className="workspace">
         <header className="topbar">
-          <div><span className="eyebrow">{activeView === 'kits' ? 'METABOLIC CARE / KIT MANAGEMENT' : activeView === 'journeys' ? 'CARE PROGRAMS / MONTHLY SEQUENCING' : activeView === 'routing' ? 'ASSESSMENT INTELLIGENCE / KIT ROUTING' : activeView === 'rules' ? 'DECISION ENGINE / RECOMMENDATION RULES' : 'MEMBER INTELLIGENCE / QUIZ OUTCOMES'}</span><h1>{activeView === 'kits' ? 'Kit Studio' : activeView === 'journeys' ? 'Treatment journeys' : activeView === 'routing' ? 'Quiz & routing' : activeView === 'rules' ? 'Rules & guardrails' : 'User assessments'}</h1><p>{activeView === 'kits' ? 'Compose precise care kits from your live product catalogue.' : activeView === 'journeys' ? 'Arrange each disease pathway into a clear month-by-month care program.' : activeView === 'routing' ? 'Tune how each answer guides a member toward the right disease pathway and kit.' : activeView === 'rules' ? 'Define the safeguards, overrides and constraints applied to every recommendation.' : 'Search members and understand exactly how their quiz became a kit recommendation.'}</p></div>
+          <div><span className="eyebrow">{activeView === 'kits' ? 'METABOLIC CARE / KIT MANAGEMENT' : activeView === 'journeys' ? 'CARE PROGRAMS / MONTHLY SEQUENCING' : activeView === 'routing' ? 'ASSESSMENT INTELLIGENCE / KIT ROUTING' : activeView === 'rules' ? 'DECISION ENGINE / RECOMMENDATION RULES' : activeView === 'videos' ? 'CONTENT OPERATIONS / CLASS VIDEO LIBRARY' : activeView === 'reels' ? 'CONTENT OPERATIONS / REEL STUDIO' : 'MEMBER INTELLIGENCE / QUIZ OUTCOMES'}</span><h1>{activeView === 'kits' ? 'Kit Studio' : activeView === 'journeys' ? 'Treatment journeys' : activeView === 'routing' ? 'Quiz & routing' : activeView === 'rules' ? 'Rules & guardrails' : activeView === 'videos' ? 'Class videos' : activeView === 'reels' ? 'Reels & analytics' : 'User assessments'}</h1><p>{activeView === 'kits' ? 'Compose precise care kits from your live product catalogue.' : activeView === 'journeys' ? 'Arrange each disease pathway into a clear month-by-month care program.' : activeView === 'routing' ? 'Tune how each answer guides a member toward the right disease pathway and kit.' : activeView === 'rules' ? 'Define the safeguards, overrides and constraints applied to every recommendation.' : activeView === 'videos' ? 'Upload private class videos to Wasabi and manage publication.' : activeView === 'reels' ? 'Publish short-form health content and measure every reel independently.' : 'Search members and understand exactly how their quiz became a kit recommendation.'}</p></div>
           <div className="header-actions">{activeView === 'kits' && <><button className="secondary-button" onClick={load}><Icon name="refresh"/>Refresh</button><button className="primary-button" onClick={() => setEditor(blankEditor())}><Icon name="plus"/>Create new kit</button></>}</div>
         </header>
 
-        {activeView === 'users' ? <UserAssessments/> : activeView === 'rules' ? <RuleEngine onToast={setToast}/> : activeView === 'journeys' ? <MonthlyJourneys kits={kits} onKitsChange={setKits} onToast={setToast}/> : activeView === 'routing' ? <QuizRouting onToast={setToast}/> : <>
+        {activeView === 'reels' ? <Reels onToast={setToast}/> : activeView === 'videos' ? <VideoLibrary onToast={setToast}/> : activeView === 'users' ? <UserAssessments/> : activeView === 'rules' ? <RuleEngine onToast={setToast}/> : activeView === 'journeys' ? <MonthlyJourneys kits={kits} onKitsChange={setKits} onToast={setToast}/> : activeView === 'routing' ? <QuizRouting onToast={setToast}/> : <>
         <section className="metrics-row">
           <div className="metric-card accent"><span>Active kits</span><strong>{metrics.active}</strong><small>of {kits.length} total</small></div>
           <div className="metric-card"><span>Disease combinations</span><strong>{metrics.combinations}</strong><small>personalized pathways</small></div>
