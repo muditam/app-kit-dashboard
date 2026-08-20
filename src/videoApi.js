@@ -39,7 +39,13 @@ export const videoApi = {
   createUpload: (videoClassId, payload) => request(`/classes/${videoClassId}/assets/uploads`, {
     method: 'POST', body: JSON.stringify(payload),
   }),
+  createThumbnailUpload: (videoClassId, payload) => request(`/classes/${videoClassId}/thumbnail/uploads`, {
+    method: 'POST', body: JSON.stringify(payload),
+  }),
   uploadFile: putFile,
+  completeThumbnailUpload: (videoClassId, payload) => request(`/classes/${videoClassId}/thumbnail/complete`, {
+    method: 'POST', body: JSON.stringify(payload),
+  }),
   completeUpload: (videoClassId, assetId, payload) => request(`/classes/${videoClassId}/assets/${assetId}/complete`, {
     method: 'POST', body: JSON.stringify(payload),
   }),

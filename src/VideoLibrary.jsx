@@ -40,6 +40,8 @@ export default function VideoLibrary({ onToast }) {
   const [videos, setVideos] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [file, setFile] = useState(null);
+  const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState('');
   const [metadata, setMetadata] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -79,8 +81,26 @@ export default function VideoLibrary({ onToast }) {
     }
   }
 
+  function selectThumbnail(event) {
+    const selected = event.target.files?.[0] || null;
+    if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+    setThumbnailFile(null); setThumbnailPreview(''); setError('');
+    if (!selected) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(selected.type)) {
+      setError('Choose a JPEG, PNG or WebP thumbnail.');
+      return;
+    }
+    if (selected.size > 10 * 1024 * 1024) {
+      setError('Thumbnail must be 10 MB or smaller.');
+      return;
+    }
+    setThumbnailFile(selected);
+    setThumbnailPreview(URL.createObjectURL(selected));
+  }
+
   async function submit(event) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     if (!file || !metadata) return setError('Select a valid MP4 before uploading.');
     if (!form.title.trim()) return setError('Enter a video title.');
     setSubmitting(true); setProgress(0); setError('');
@@ -99,10 +119,29 @@ export default function VideoLibrary({ onToast }) {
       });
       await videoApi.uploadFile(upload.uploadUrl, file, upload.requiredHeaders, setProgress);
       await videoApi.completeUpload(videoClassId, upload.asset.id, metadata);
+      if (thumbnailFile) {
+        const thumbnailUpload = await videoApi.createThumbnailUpload(videoClassId, {
+          mimeType: thumbnailFile.type,
+          sizeBytes: thumbnailFile.size,
+        });
+        await videoApi.uploadFile(
+          thumbnailUpload.uploadUrl,
+          thumbnailFile,
+          thumbnailUpload.requiredHeaders,
+        );
+        await videoApi.completeThumbnailUpload(videoClassId, {
+          objectKey: thumbnailUpload.objectKey,
+          mimeType: thumbnailUpload.mimeType,
+          sizeBytes: thumbnailUpload.sizeBytes,
+        });
+      }
       if (form.publish) await videoApi.publishClass(videoClassId, upload.asset.id);
       onToast?.(form.publish ? 'Video uploaded and published' : 'Video uploaded and ready');
       setForm(initialForm); setFile(null); setMetadata(null); setProgress(0);
-      event.currentTarget.reset();
+      setThumbnailFile(null);
+      if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+      setThumbnailPreview('');
+      formElement.reset();
       await load();
     } catch (submitError) {
       setError(submitError.message);
@@ -164,6 +203,13 @@ export default function VideoLibrary({ onToast }) {
             <b>{file ? file.name : 'Choose an MP4 video'}</b>
             <span>{file && metadata ? `${fileSize(file.size)} · ${metadata.width}×${metadata.height} · ${minutes(metadata.durationSeconds)}` : 'H.264/AAC MP4 · maximum 2 GB'}</span>
           </label>
+          <label className={`video-thumbnail-drop ${thumbnailPreview ? 'has-image' : ''}`}>
+            <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" onChange={selectThumbnail}/>
+            {thumbnailPreview
+              ? <img src={thumbnailPreview} alt="Selected class thumbnail"/>
+              : <span className="video-thumbnail-placeholder">▧</span>}
+            <span><b>{thumbnailFile ? thumbnailFile.name : 'Choose a class thumbnail'}</b><small>JPEG, PNG or WebP · maximum 10 MB · optional</small></span>
+          </label>
           <label className="video-publish-check"><input type="checkbox" checked={form.publish} onChange={(event) => setForm({ ...form, publish: event.target.checked })}/><span><b>Publish after upload</b><small>Make the class available immediately after Wasabi verification.</small></span></label>
           <div className="video-upload-progress"><i style={{ width: `${progress}%` }}/></div>
           <button className="save-button video-submit" type="submit" disabled={submitting || !file || !metadata}>{submitting ? `Uploading ${progress}%` : 'Create and upload'} <b>→</b></button>
@@ -174,7 +220,7 @@ export default function VideoLibrary({ onToast }) {
         <div className="video-panel-heading"><div><span className="step">02</span><div><small>WASABI LIBRARY</small><h2>Uploaded videos</h2></div></div><button className="secondary-button" onClick={load} disabled={loading}>Refresh</button></div>
         <div className="video-list">
           {loading ? [...Array(4)].map((_, index) => <div className="video-row-skeleton" key={index}/>) : videos.map((video) => <article className="video-row" key={video.id}>
-            <div className="video-row-icon">▶</div>
+            <div className={`video-row-icon ${video.posterUrl ? 'video-row-thumbnail' : ''}`} style={video.posterUrl ? { backgroundImage: `linear-gradient(#0003,#0003), url(${video.posterUrl})` } : undefined}>▶</div>
             <div className="video-row-copy"><div><h3>{video.title}</h3><span className={`video-status ${video.status}`}>{statusLabel(video.status)}</span></div><p>{video.instructorName || 'Muditam instructor'} · {video.category} · {minutes(video.durationSeconds)}</p><small>{video.publishedAt ? `Published ${new Date(video.publishedAt).toLocaleDateString('en-IN')}` : 'Not currently published'}</small></div>
             <div className="video-row-actions">{['ready', 'published'].includes(video.status) && <button className="video-preview-button" onClick={() => openPreview(video)}>Preview</button>}{video.status === 'ready' && <button className="video-publish-button" onClick={() => publish(video)}>Publish</button>}{video.status !== 'archived' && <button className="video-archive-button" onClick={() => archive(video)}>Archive</button>}</div>
           </article>)}

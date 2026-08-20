@@ -262,10 +262,15 @@ button { color: inherit; }
 .video-publish-check b { font-size: 10px; }.video-publish-check small { color: #8b968f; font-size: 8px; margin-top: 2px; }
 .video-upload-progress { height: 7px; overflow: hidden; border-radius: 99px; background: #e7ebe6; }
 .video-upload-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#2a7857,#75b38f); transition: width .2s; }
+.video-thumbnail-drop { min-height: 82px; padding: 9px; border: 1px dashed #b9c9bf; border-radius: 13px; background: #f8faf7; display: flex; align-items: center; gap: 12px; cursor: pointer; overflow: hidden; }
+.video-thumbnail-drop input { display: none; }
+.video-thumbnail-drop img,.video-thumbnail-placeholder { width: 112px; height: 64px; flex: 0 0 auto; border-radius: 9px; object-fit: cover; background: #e8f2eb; display: grid; place-items: center; color: var(--green); font-size: 20px; }
+.video-thumbnail-drop>span:last-child { display: grid; gap: 4px; min-width: 0; }.video-thumbnail-drop b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 10px Manrope; }.video-thumbnail-drop small { color: #89938c; font-size: 8px; }
 .video-submit { width: 100%; margin-top: 2px; }.video-submit:disabled { cursor: not-allowed; opacity: .55; transform: none; }
 .video-list { display: grid; gap: 8px; max-height: 540px; overflow-y: auto; padding-right: 3px; }
 .video-row { display: grid; grid-template-columns: 42px minmax(0,1fr) auto; gap: 11px; align-items: center; border: 1px solid #e5e6de; border-radius: 13px; background: #fff; padding: 11px; }
 .video-row-icon { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; background: #e8f2eb; color: var(--green); font-size: 12px; }
+.video-row-thumbnail { color: #fff; background-position: center; background-size: cover; text-shadow: 0 1px 5px #000; }
 .video-row-copy { min-width: 0; }.video-row-copy>div { display: flex; align-items: center; gap: 7px; }
 .video-row-copy h3 { margin: 0; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: 800 11px Manrope; }
 .video-row-copy p { margin: 4px 0 2px; color: #758179; font-size: 9px; }.video-row-copy small { color: #a0a79f; font-size: 8px; }
