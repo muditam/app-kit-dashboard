@@ -557,7 +557,7 @@ button { color: inherit; }
 .live-preview strong { font-size: 11px; }
 .live-preview small { color: #789185; font-size: 8px; }
 .route-table { border: 1px solid #e5e5dd; border-radius: 14px; overflow: hidden; background: #fff; }
-.route-table-head, .route-row { display: grid; grid-template-columns: 1.05fr 1.15fr 1.15fr 1.25fr .65fr; gap: 10px; align-items: center; }
+.route-table-head, .route-row { display: grid; grid-template-columns: 1.05fr 1.05fr 1.05fr 1.75fr 1.05fr .55fr; gap: 10px; align-items: center; }
 .route-table-head { padding: 10px 12px; background: #f7f6f0; color: #909991; font: 800 7px Manrope; letter-spacing: .1em; }
 .route-row { padding: 11px 12px; border-top: 1px solid #efeee8; min-height: 65px; }
 .answer-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -569,6 +569,13 @@ button { color: inherit; }
 .pathway-cell select { width: 100%; border: 1px solid #e5e5dd; border-radius: 8px; background: #fff; padding: 7px; font-size: 9px; }
 .pathway-chip { color: #2d7a57; font-size: 8px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pathway-chip i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #4eaa76; }
+.body-signal-cell { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.body-signal-chip { display: inline-flex; align-items: center; border: 1px solid #e6e3dc; border-radius: 8px; background: #faf9f5; overflow: hidden; }
+.body-signal-chip button { border: 0; background: transparent; color: #8d958f; padding: 6px 7px; font: 700 8px Manrope; cursor: pointer; }
+.body-signal-chip.selected { border-color: #a9ceb5; background: #eef8f2; box-shadow: inset 0 0 0 1px rgba(78,170,118,.08); }
+.body-signal-chip.selected button { color: #267451; }
+.body-signal-chip input { width: 30px; align-self: stretch; border: 0; border-left: 1px solid #cce2d3; outline: 0; background: #fff; color: #285e48; text-align: center; font: 800 8px Manrope; }
+.branch-note { flex-basis: 100%; color: #9a8270; font-size: 8px; line-height: 1.3; }
 .kit-cell small { display: block; color: #9da59f; font-size: 8px; margin: 4px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .weight-cell { display: flex; align-items: center; gap: 6px; }
 .weight-cell input { width: 100%; accent-color: var(--orange); }
@@ -596,5 +603,5 @@ button { color: inherit; }
   .influence-header { display: block; }
   .live-preview { margin-top: 12px; }
   .route-table { overflow-x: auto; }
-  .route-table-head, .route-row { min-width: 900px; }
+  .route-table-head, .route-row { min-width: 1160px; }
 }
