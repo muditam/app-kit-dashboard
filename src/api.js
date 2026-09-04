@@ -12,6 +12,7 @@ async function request(path, options = {}) {
 
 export const api = {
   getProducts: () => request('/products'),
+  updateProductPricing: (id, quantityPrices) => request(`/products/${id}/pricing`, { method: 'PATCH', body: JSON.stringify({ quantityPrices }) }),
   getKits: () => request('/kits'),
   createKit: (kit) => request('/kits', { method: 'POST', body: JSON.stringify(kit) }),
   updateKit: (id, kit) => request(`/kits/${id}`, { method: 'PATCH', body: JSON.stringify(kit) }),

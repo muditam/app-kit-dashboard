@@ -6,6 +6,9 @@ import MonthlyJourneys from './MonthlyJourneys';
 import UserAssessments from './UserAssessments';
 import VideoLibrary from './VideoLibrary';
 import Reels from './Reels';
+import TestimonialVideos from './TestimonialVideos';
+import ProductPricingEditor from './ProductPricingEditor';
+import { productLinePrice } from './productPricing';
 
 const diseaseOptions = [
   { key: 'diabetes', label: 'Diabetes', icon: 'D' },
@@ -40,6 +43,7 @@ function Icon({ name, size = 18 }) {
     users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
     video: <><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3V9Z"/></>,
     reel: <><rect x="6" y="2" width="12" height="20" rx="3"/><path d="m10 8 5 4-5 4V8Z"/><path d="M10 5h4"/></>,
+    stories: <><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/><path d="m10 9 5 3-5 3V9Z"/></>,
   };
   return <svg className="icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -50,7 +54,7 @@ function ProductImage({ product, small = false }) {
   return <img className={small ? 'product-image small' : 'product-image'} src={product.image} alt="" onError={() => setFailed(true)} />;
 }
 
-function ProductCard({ product, onAdd }) {
+function ProductCard({ product, onAdd, onEditPricing }) {
   return (
     <article className="product-card" draggable onDragStart={(event) => { event.dataTransfer.setData('text/product-id', String(product._id)); event.dataTransfer.effectAllowed = 'copy'; }}>
       <div className="drag-grip"><Icon name="grip" size={16}/></div>
@@ -59,6 +63,7 @@ function ProductCard({ product, onAdd }) {
         <span className="category-label">{String(product.category || 'wellness').replaceAll('_', ' ')}</span>
         <strong>{product.name}</strong>
         <span className={product.unitPrice == null ? 'missing-price' : 'product-price'}>{money(product.unitPrice)}</span>
+        <button className="edit-product-prices" onClick={() => onEditPricing(product)}>Edit prices{product.packPrices?.length > 1 ? ' · 1 & 3 quantity' : ''}</button>
       </div>
       <button className="icon-button add-product" onClick={() => onAdd(product)} title={`Add ${product.name}`}><Icon name="plus" size={17}/></button>
     </article>
@@ -92,11 +97,11 @@ function EditorProduct({ item, onQuantity, onRemove }) {
   return (
     <div className="editor-product">
       <ProductImage product={product} small/>
-      <div className="editor-product-copy"><strong>{product.name}</strong><span>{money(product.unitPrice)} each</span></div>
+      <div className="editor-product-copy"><strong>{product.name}</strong><span>{product.packPrices?.some((pack) => pack.quantity === item.quantity && item.quantity > 1) ? `${item.quantity}-unit pack total` : `${money(product.unitPrice)} each`}</span></div>
       <div className="quantity-stepper">
         <button onClick={() => onQuantity(-1)}>−</button><span>{item.quantity}</span><button onClick={() => onQuantity(1)}>+</button>
       </div>
-      <strong className="line-price">{product.unitPrice == null ? '—' : money(product.unitPrice * item.quantity)}</strong>
+      <strong className="line-price">{productLinePrice(product, item.quantity) == null ? 'Set price' : money(productLinePrice(product, item.quantity))}</strong>
       <button className="remove-button" onClick={onRemove} title="Remove item"><Icon name="trash" size={16}/></button>
     </div>
   );
@@ -117,6 +122,16 @@ export default function App() {
   const [toast, setToast] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [activeView, setActiveView] = useState('kits');
+  const [pricingProduct, setPricingProduct] = useState(null);
+
+  function productPricingSaved(product) {
+    const replace = (items) => items.map((item) => String(item.product?._id) === String(product._id) ? { ...item, product, linePrice: productLinePrice(product, item.quantity) } : item);
+    setProducts((current) => current.map((item) => item._id === product._id ? product : item));
+    setKits((current) => current.map((kit) => ({ ...kit, products: replace(kit.products || []) })));
+    setEditor((current) => ({ ...current, products: replace(current.products) }));
+    setPricingProduct(null);
+    setToast('Product prices saved across your kits');
+  }
 
   async function load() {
     setLoading(true); setError('');
@@ -143,8 +158,8 @@ export default function App() {
     const searchMatch = `${kit.name} ${kit.slug} ${kit.condition}`.toLowerCase().includes(kitSearch.toLowerCase());
     return statusMatch && combinationMatch && searchMatch;
   }).sort((a, b) => a.conditionKey.localeCompare(b.conditionKey) || (a.monthNumber || a.kitNumber) - (b.monthNumber || b.kitNumber)), [kits, kitFilter, kitCombination, kitSearch]);
-  const calculatedTotal = useMemo(() => editor.products.reduce((total, item) => total + (Number(item.product?.unitPrice) || 0) * item.quantity, 0), [editor.products]);
-  const missingPrice = editor.products.some((item) => item.product?.unitPrice == null);
+  const calculatedTotal = useMemo(() => editor.products.reduce((total, item) => total + (productLinePrice(item.product, item.quantity) || 0), 0), [editor.products]);
+  const missingPrice = editor.products.some((item) => productLinePrice(item.product, item.quantity) == null);
 
   function selectKit(kit) {
     setEditor({
@@ -220,17 +235,17 @@ export default function App() {
     <div className="app-shell">
       <aside className="rail">
         <div className="brand-mark">m<span>u</span></div>
-        <nav><button className={activeView === 'kits' ? 'active' : ''} onClick={() => setActiveView('kits')} aria-label="Kit Studio"><Icon name="grid"/></button><button className={activeView === 'journeys' ? 'active' : ''} onClick={() => setActiveView('journeys')} aria-label="Monthly journeys"><Icon name="timeline"/></button><button className={activeView === 'routing' ? 'active' : ''} onClick={() => setActiveView('routing')} aria-label="Quiz and routing"><Icon name="spark"/></button><button className={activeView === 'rules' ? 'active' : ''} onClick={() => setActiveView('rules')} aria-label="Rules Studio"><Icon name="shield"/></button><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')} aria-label="User assessments"><Icon name="users"/></button><button className={activeView === 'videos' ? 'active' : ''} onClick={() => setActiveView('videos')} aria-label="Class video library"><Icon name="video"/></button><button className={activeView === 'reels' ? 'active' : ''} onClick={() => setActiveView('reels')} aria-label="Reels studio"><Icon name="reel"/></button></nav>
+        <nav><button className={activeView === 'kits' ? 'active' : ''} onClick={() => setActiveView('kits')} aria-label="Kit Studio"><Icon name="grid"/></button><button className={activeView === 'journeys' ? 'active' : ''} onClick={() => setActiveView('journeys')} aria-label="Monthly journeys"><Icon name="timeline"/></button><button className={activeView === 'routing' ? 'active' : ''} onClick={() => setActiveView('routing')} aria-label="Quiz and routing"><Icon name="spark"/></button><button className={activeView === 'rules' ? 'active' : ''} onClick={() => setActiveView('rules')} aria-label="Rules Studio"><Icon name="shield"/></button><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')} aria-label="User assessments"><Icon name="users"/></button><button className={activeView === 'videos' ? 'active' : ''} onClick={() => setActiveView('videos')} aria-label="Class video library"><Icon name="video"/></button><button className={activeView === 'reels' ? 'active' : ''} onClick={() => setActiveView('reels')} aria-label="Reels studio"><Icon name="reel"/></button><button className={activeView === 'stories' ? 'active' : ''} onClick={() => setActiveView('stories')} aria-label="Customer story videos"><Icon name="stories"/></button></nav>
         <div className="profile-dot">AN</div>
       </aside>
 
       <main className="workspace">
         <header className="topbar">
-          <div><span className="eyebrow">{activeView === 'kits' ? 'METABOLIC CARE / KIT MANAGEMENT' : activeView === 'journeys' ? 'CARE PROGRAMS / MONTHLY SEQUENCING' : activeView === 'routing' ? 'ASSESSMENT INTELLIGENCE / KIT ROUTING' : activeView === 'rules' ? 'DECISION ENGINE / RECOMMENDATION RULES' : activeView === 'videos' ? 'CONTENT OPERATIONS / CLASS VIDEO LIBRARY' : activeView === 'reels' ? 'CONTENT OPERATIONS / REEL STUDIO' : 'MEMBER INTELLIGENCE / QUIZ OUTCOMES'}</span><h1>{activeView === 'kits' ? 'Kit Studio' : activeView === 'journeys' ? 'Treatment journeys' : activeView === 'routing' ? 'Quiz & routing' : activeView === 'rules' ? 'Rules & guardrails' : activeView === 'videos' ? 'Class videos' : activeView === 'reels' ? 'Reels & analytics' : 'User assessments'}</h1><p>{activeView === 'kits' ? 'Compose precise care kits from your live product catalogue.' : activeView === 'journeys' ? 'Arrange each disease pathway into a clear month-by-month care program.' : activeView === 'routing' ? 'Tune how each answer guides a member toward the right disease pathway and kit.' : activeView === 'rules' ? 'Define the safeguards, overrides and constraints applied to every recommendation.' : activeView === 'videos' ? 'Upload private class videos to Wasabi and manage publication.' : activeView === 'reels' ? 'Upload reels to Cloudflare Stream and monitor processing before mobile publishing is enabled.' : 'Search members and understand exactly how their quiz became a kit recommendation.'}</p></div>
+          <div><span className="eyebrow">{activeView === 'kits' ? 'METABOLIC CARE / KIT MANAGEMENT' : activeView === 'journeys' ? 'CARE PROGRAMS / MONTHLY SEQUENCING' : activeView === 'routing' ? 'ASSESSMENT INTELLIGENCE / KIT ROUTING' : activeView === 'rules' ? 'DECISION ENGINE / RECOMMENDATION RULES' : activeView === 'videos' ? 'CONTENT OPERATIONS / CLASS VIDEO LIBRARY' : activeView === 'reels' ? 'CONTENT OPERATIONS / REEL STUDIO' : activeView === 'stories' ? 'CONTENT OPERATIONS / CUSTOMER PROOF' : 'MEMBER INTELLIGENCE / QUIZ OUTCOMES'}</span><h1>{activeView === 'kits' ? 'Kit Studio' : activeView === 'journeys' ? 'Treatment journeys' : activeView === 'routing' ? 'Quiz & routing' : activeView === 'rules' ? 'Rules & guardrails' : activeView === 'videos' ? 'Class videos' : activeView === 'reels' ? 'Reels & analytics' : activeView === 'stories' ? 'Customer stories' : 'User assessments'}</h1><p>{activeView === 'kits' ? 'Compose precise care kits from your live product catalogue.' : activeView === 'journeys' ? 'Arrange each disease pathway into a clear month-by-month care program.' : activeView === 'routing' ? 'Tune how each answer guides a member toward the right disease pathway and kit.' : activeView === 'rules' ? 'Define the safeguards, overrides and constraints applied to every recommendation.' : activeView === 'videos' ? 'Upload private class videos to Wasabi and manage publication.' : activeView === 'reels' ? 'Upload reels to Cloudflare Stream and manage mobile publishing.' : activeView === 'stories' ? 'Manage Cloudflare videos shown in Real People Real Stories.' : 'Search members and understand exactly how their quiz became a kit recommendation.'}</p></div>
           <div className="header-actions">{activeView === 'kits' && <><button className="secondary-button" onClick={load}><Icon name="refresh"/>Refresh</button><button className="primary-button" onClick={() => setEditor(blankEditor())}><Icon name="plus"/>Create new kit</button></>}</div>
         </header>
 
-        {activeView === 'reels' ? <Reels onToast={setToast}/> : activeView === 'videos' ? <VideoLibrary onToast={setToast}/> : activeView === 'users' ? <UserAssessments/> : activeView === 'rules' ? <RuleEngine onToast={setToast}/> : activeView === 'journeys' ? <MonthlyJourneys kits={kits} onKitsChange={setKits} onToast={setToast}/> : activeView === 'routing' ? <QuizRouting onToast={setToast}/> : <>
+        {activeView === 'stories' ? <TestimonialVideos onToast={setToast}/> : activeView === 'reels' ? <Reels onToast={setToast}/> : activeView === 'videos' ? <VideoLibrary onToast={setToast}/> : activeView === 'users' ? <UserAssessments/> : activeView === 'rules' ? <RuleEngine onToast={setToast}/> : activeView === 'journeys' ? <MonthlyJourneys kits={kits} onKitsChange={setKits} onToast={setToast}/> : activeView === 'routing' ? <QuizRouting onToast={setToast}/> : <>
         <section className="metrics-row">
           <div className="metric-card accent"><span>Active kits</span><strong>{metrics.active}</strong><small>of {kits.length} total</small></div>
           <div className="metric-card"><span>Disease combinations</span><strong>{metrics.combinations}</strong><small>personalized pathways</small></div>
@@ -249,7 +264,7 @@ export default function App() {
             </div>
             <p className="drag-hint"><Icon name="grip" size={14}/>Drag a product into the kit editor</p>
             <div className="product-list">
-              {loading ? [...Array(5)].map((_, index) => <div className="skeleton product-skeleton" key={index}/>) : filteredProducts.map((product) => <ProductCard key={product._id} product={product} onAdd={addProduct}/>)}
+              {loading ? [...Array(5)].map((_, index) => <div className="skeleton product-skeleton" key={index}/>) : filteredProducts.map((product) => <ProductCard key={product._id} product={product} onAdd={addProduct} onEditPricing={setPricingProduct}/>)}
             </div>
           </aside>
 
@@ -301,6 +316,7 @@ export default function App() {
         </>}
       </main>
       {toast && <div className="toast"><Icon name="check"/><span>{toast}</span></div>}
+      {pricingProduct && <ProductPricingEditor key={pricingProduct._id} product={pricingProduct} onSaved={productPricingSaved} onClose={() => setPricingProduct(null)}/>}
     </div>
   );
 }
