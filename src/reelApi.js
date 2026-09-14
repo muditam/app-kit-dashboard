@@ -15,19 +15,20 @@ async function request(path, options = {}) {
   return body;
 }
 
-function uploadFile(url, file, headers, onProgress) {
+function uploadFile(url, file, _headers, onProgress) {
   return new Promise((resolve, reject) => {
     const upload = new XMLHttpRequest();
-    upload.open('PUT', url, true);
-    Object.entries(headers || {}).forEach(([name, value]) => upload.setRequestHeader(name, value));
+    upload.open('POST', url, true);
     upload.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
     };
     upload.onload = () => upload.status >= 200 && upload.status < 300
       ? resolve()
-      : reject(new Error(`Wasabi reel upload failed (${upload.status})`));
-    upload.onerror = () => reject(new Error('Wasabi reel upload failed. Check bucket CORS and connectivity.'));
-    upload.send(file);
+      : reject(new Error(`Cloudflare Stream upload failed (${upload.status})`));
+    upload.onerror = () => reject(new Error('Cloudflare Stream upload failed. Check the connection and try again.'));
+    const body = new FormData();
+    body.append('file', file, file.name);
+    upload.send(body);
   });
 }
 
