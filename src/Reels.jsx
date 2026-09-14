@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { reelApi } from './reelApi';
 
-const initialForm = { title: '', description: '', tags: '' };
+const initialForm = { title: '', description: '', tags: '', shareUrl: '' };
 const compact = new Intl.NumberFormat('en-IN', { notation: 'compact', maximumFractionDigits: 1 });
 const statusLabel = (value) => String(value || 'draft').replaceAll('_', ' ');
 const duration = (seconds) => {
@@ -91,6 +91,7 @@ export default function Reels({ onToast }) {
   async function submit(event) {
     event.preventDefault();
     if (!file || !metadata) return setError('Select a valid MP4 reel first.');
+    if (!form.shareUrl.trim()) return setError('Add the Instagram or YouTube share link first.');
     // React clears currentTarget after the synchronous event handler returns.
     // Keep the form reference before awaiting the upload requests so the
     // native file input can be reset after a successful upload.
@@ -149,6 +150,7 @@ export default function Reels({ onToast }) {
           <label className="video-field"><span>Reel title</span><input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} maxLength="160" placeholder="A small habit for better metabolism"/></label>
           <label className="video-field"><span>Description <em>optional</em></span><textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} maxLength="2200" placeholder="Add context or a short call to action"/></label>
           <label className="video-field"><span>Hashtags</span><input value={form.tags} onChange={(event) => setForm({ ...form, tags: event.target.value })} placeholder="#metabolism #wellness #nutrition"/></label>
+          <label className="video-field"><span>Share link <em>required · Instagram or YouTube</em></span><input type="url" required value={form.shareUrl} onChange={(event) => setForm({ ...form, shareUrl: event.target.value })} placeholder="https://www.instagram.com/reel/... or https://youtu.be/..."/></label>
           <label className="reel-drop">
             <input type="file" accept="video/mp4,.mp4" onChange={selectFile}/>
             <span className="reel-drop-icon">＋</span><b>{file ? file.name : 'Choose vertical MP4'}</b>
@@ -156,7 +158,7 @@ export default function Reels({ onToast }) {
           </label>
           <div className="video-publish-check"><span><b>Publish when ready</b><small>After Cloudflare finishes processing, use the library switch to publish the reel to the mobile feed.</small></span></div>
           <div className="video-upload-progress"><i style={{ width: `${progress}%` }}/></div>
-          <button className="save-button video-submit" disabled={submitting || !metadata}>{submitting ? `Uploading ${progress}%` : 'Upload reel'} <b>→</b></button>
+          <button className="save-button video-submit" disabled={submitting || !metadata || !form.shareUrl.trim()}>{submitting ? `Uploading ${progress}%` : 'Upload reel'} <b>→</b></button>
         </form>
       </aside>
 
