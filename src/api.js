@@ -26,4 +26,5 @@ export const api = {
   getRules: () => request('/rules'),
   createRule: (rule) => request('/rules', { method: 'POST', body: JSON.stringify(rule) }),
   updateRule: (id, rule) => request(`/rules/${id}`, { method: 'PATCH', body: JSON.stringify(rule) }),
+  getAIUsage: (period = 'month') => request(`/ai-usage?period=${encodeURIComponent(period)}`),
 };

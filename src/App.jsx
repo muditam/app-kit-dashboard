@@ -8,6 +8,7 @@ import VideoLibrary from './VideoLibrary';
 import Reels from './Reels';
 import TestimonialVideos from './TestimonialVideos';
 import ProductPricingEditor from './ProductPricingEditor';
+import AICostAnalytics from './AICostAnalytics';
 import { productLinePrice } from './productPricing';
 import { logout } from './auth';
 import ApplicationSwitcher from './ApplicationSwitcher';
@@ -18,6 +19,9 @@ const diseaseOptions = [
   { key: 'kidney', label: 'Kidney', icon: 'K' },
   { key: 'heart', label: 'Heart', icon: 'H' },
 ];
+// Keep the completed analytics module available for a later iteration without
+// exposing it in the current dashboard navigation.
+const AI_COST_ANALYTICS_VISIBLE = false;
 //blank
 const blankEditor = () => ({
   _id: null, name: '', kitNumber: '', monthNumber: '', diseases: ['diabetes'], pricingMode: 'manual',
@@ -240,19 +244,16 @@ export default function App({ user }) {
       <aside className="rail">
         <div className="brand-mark">m<span>u</span></div>
         <nav><button className={activeView === 'kits' ? 'active' : ''} onClick={() => setActiveView('kits')} aria-label="Kit Studio"><Icon name="grid"/></button><button className={activeView === 'journeys' ? 'active' : ''} onClick={() => setActiveView('journeys')} aria-label="Monthly journeys"><Icon name="timeline"/></button><button className={activeView === 'routing' ? 'active' : ''} onClick={() => setActiveView('routing')} aria-label="Quiz and routing"><Icon name="spark"/></button><button className={activeView === 'rules' ? 'active' : ''} onClick={() => setActiveView('rules')} aria-label="Rules Studio"><Icon name="shield"/></button><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')} aria-label="User assessments"><Icon name="users"/></button><button className={activeView === 'videos' ? 'active' : ''} onClick={() => setActiveView('videos')} aria-label="Class video library"><Icon name="video"/></button><button className={activeView === 'reels' ? 'active' : ''} onClick={() => setActiveView('reels')} aria-label="Reels studio"><Icon name="reel"/></button><button className={activeView === 'stories' ? 'active' : ''} onClick={() => setActiveView('stories')} aria-label="Customer story videos"><Icon name="stories"/></button></nav>
-        <div className="rail-account">
-          <ApplicationSwitcher user={user} trigger={({ open }) => <button type="button" className="rail-action" onClick={open} aria-label="All applications" title="All applications"><Icon name="apps"/></button>}/>
-          <button type="button" className="rail-action" onClick={() => void logout()} aria-label="Sign out" title="Sign out"><Icon name="logout"/></button>
-        </div>
+        <div className="profile-dot">AN</div>
       </aside>
 
       <main className="workspace">
         <header className="topbar">
-          <div><span className="eyebrow">{activeView === 'kits' ? 'METABOLIC CARE / KIT MANAGEMENT' : activeView === 'journeys' ? 'CARE PROGRAMS / MONTHLY SEQUENCING' : activeView === 'routing' ? 'ASSESSMENT INTELLIGENCE / KIT ROUTING' : activeView === 'rules' ? 'DECISION ENGINE / RECOMMENDATION RULES' : activeView === 'videos' ? 'CONTENT OPERATIONS / CLASS VIDEO LIBRARY' : activeView === 'reels' ? 'CONTENT OPERATIONS / REEL STUDIO' : activeView === 'stories' ? 'CONTENT OPERATIONS / CUSTOMER PROOF' : 'MEMBER INTELLIGENCE / QUIZ OUTCOMES'}</span><h1>{activeView === 'kits' ? 'Kit Studio' : activeView === 'journeys' ? 'Treatment journeys' : activeView === 'routing' ? 'Quiz & routing' : activeView === 'rules' ? 'Rules & guardrails' : activeView === 'videos' ? 'Class videos' : activeView === 'reels' ? 'Reels & analytics' : activeView === 'stories' ? 'Customer stories' : 'User assessments'}</h1><p>{activeView === 'kits' ? 'Compose precise care kits from your live product catalogue.' : activeView === 'journeys' ? 'Arrange each disease pathway into a clear month-by-month care program.' : activeView === 'routing' ? 'Tune how each answer guides a member toward the right disease pathway and kit.' : activeView === 'rules' ? 'Define the safeguards, overrides and constraints applied to every recommendation.' : activeView === 'videos' ? 'Upload private class videos to Wasabi and manage publication.' : activeView === 'reels' ? 'Upload reels to Cloudflare Stream and manage mobile publishing.' : activeView === 'stories' ? 'Manage Cloudflare videos shown in Real People Real Stories.' : 'Search members and understand exactly how their quiz became a kit recommendation.'}</p></div>
+          <div><span className="eyebrow">{activeView === 'kits' ? 'METABOLIC CARE / KIT MANAGEMENT' : activeView === 'journeys' ? 'CARE PROGRAMS / MONTHLY SEQUENCING' : activeView === 'routing' ? 'ASSESSMENT INTELLIGENCE / KIT ROUTING' : activeView === 'rules' ? 'DECISION ENGINE / RECOMMENDATION RULES' : activeView === 'costs' ? 'AI OPERATIONS / SPEND OBSERVABILITY' : activeView === 'videos' ? 'CONTENT OPERATIONS / CLASS VIDEO LIBRARY' : activeView === 'reels' ? 'CONTENT OPERATIONS / REEL STUDIO' : activeView === 'stories' ? 'CONTENT OPERATIONS / CUSTOMER PROOF' : 'MEMBER INTELLIGENCE / QUIZ OUTCOMES'}</span><h1>{activeView === 'kits' ? 'Kit Studio' : activeView === 'journeys' ? 'Treatment journeys' : activeView === 'routing' ? 'Quiz & routing' : activeView === 'rules' ? 'Rules & guardrails' : activeView === 'costs' ? 'AI cost analytics' : activeView === 'videos' ? 'Class videos' : activeView === 'reels' ? 'Reels & analytics' : activeView === 'stories' ? 'Customer stories' : 'User assessments'}</h1><p>{activeView === 'kits' ? 'Compose precise care kits from your live product catalogue.' : activeView === 'journeys' ? 'Arrange each disease pathway into a clear month-by-month care program.' : activeView === 'routing' ? 'Tune how each answer guides a member toward the right disease pathway and kit.' : activeView === 'rules' ? 'Define the safeguards, overrides and constraints applied to every recommendation.' : activeView === 'costs' ? 'Track model usage and estimated spend by module, model and time period.' : activeView === 'videos' ? 'Upload private class videos to Wasabi and manage publication.' : activeView === 'reels' ? 'Upload reels to Cloudflare Stream and manage mobile publishing.' : activeView === 'stories' ? 'Manage Cloudflare videos shown in Real People Real Stories.' : 'Search members and understand exactly how their quiz became a kit recommendation.'}</p></div>
           <div className="header-actions">{activeView === 'kits' && <><button className="secondary-button" onClick={load}><Icon name="refresh"/>Refresh</button><button className="primary-button" onClick={() => setEditor(blankEditor())}><Icon name="plus"/>Create new kit</button></>}</div>
         </header>
 
-        {activeView === 'stories' ? <TestimonialVideos onToast={setToast}/> : activeView === 'reels' ? <Reels onToast={setToast}/> : activeView === 'videos' ? <VideoLibrary onToast={setToast}/> : activeView === 'users' ? <UserAssessments/> : activeView === 'rules' ? <RuleEngine onToast={setToast}/> : activeView === 'journeys' ? <MonthlyJourneys kits={kits} onKitsChange={setKits} onToast={setToast}/> : activeView === 'routing' ? <QuizRouting onToast={setToast}/> : <>
+        {activeView === 'stories' ? <TestimonialVideos onToast={setToast}/> : activeView === 'reels' ? <Reels onToast={setToast}/> : activeView === 'videos' ? <VideoLibrary onToast={setToast}/> : activeView === 'costs' ? <AICostAnalytics onToast={setToast}/> : activeView === 'users' ? <UserAssessments/> : activeView === 'rules' ? <RuleEngine onToast={setToast}/> : activeView === 'journeys' ? <MonthlyJourneys kits={kits} onKitsChange={setKits} onToast={setToast}/> : activeView === 'routing' ? <QuizRouting onToast={setToast}/> : <>
         <section className="metrics-row">
           <div className="metric-card accent"><span>Active kits</span><strong>{metrics.active}</strong><small>of {kits.length} total</small></div>
           <div className="metric-card"><span>Disease combinations</span><strong>{metrics.combinations}</strong><small>personalized pathways</small></div>
