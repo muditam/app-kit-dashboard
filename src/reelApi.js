@@ -4,6 +4,7 @@ const REEL_API_BASE_URL = `${ADMIN_API_BASE_URL}/reels`;
 async function request(path, options = {}) {
   const response = await fetch(`${REEL_API_BASE_URL}${path}`, {
     ...options,
+    credentials: 'include',
     headers: {
       Accept: 'application/json',
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
