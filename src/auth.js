@@ -56,10 +56,14 @@ export function redirectToLogin() {
   window.location.replace(loginUrl());
 }
 
+export function redirectToPlainLogin() {
+  window.location.replace(LOGIN_URL);
+}
+
 export async function logout() {
   await fetch(`${SHIPTRACK_API_URL}/api/auth/logout`, {
     method: 'POST',
     credentials: 'include',
   }).catch(() => undefined);
-  redirectToLogin();
+  redirectToPlainLogin();
 }
