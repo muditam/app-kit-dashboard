@@ -11,7 +11,7 @@ const TICKETING_URL = (import.meta.env.VITE_TICKETING_URL || new URL('/ticketing
 const FINANCE_URL = (import.meta.env.VITE_FINANCE_URL || new URL('/finance', LOGIN_URL).toString()).replace(/\/$/, '');
 const SALES_URL = (import.meta.env.VITE_SALES_URL || (window.location.hostname.endsWith('60brands.com') ? 'https://sales.60brands.com' : new URL('/sales', LOGIN_URL).toString())).replace(/\/$/, '');
 const HR_INCENTIVES_URL = (import.meta.env.VITE_HR_INCENTIVES_URL || new URL('/hr-incentives', LOGIN_URL).toString()).replace(/\/$/, '');
-const CHAT_DASHBOARD_URL = (import.meta.env.VITE_CHAT_DASHBOARD_URL || 'https://muditam-app-dashboard.vercel.app/widget/dashboard').replace(/\/$/, '');
+const CHAT_DASHBOARD_URL = (import.meta.env.VITE_CHAT_DASHBOARD_URL || 'https://chat.muditam.com/widget/dashboard').replace(/\/$/, '');
 const REQUIRED_APPLICATION = 'app-dashboard';
 
 export const applicationCatalog = [
