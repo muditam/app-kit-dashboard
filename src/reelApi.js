@@ -36,6 +36,7 @@ function uploadFile(url, file, _headers, onProgress) {
 export const reelApi = {
   list: () => request(''),
   create: (payload) => request('', { method: 'POST', body: JSON.stringify(payload) }),
+  update: (reelId, payload) => request(`/${reelId}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   createUpload: (reelId, payload) => request(`/${reelId}/assets/uploads`, { method: 'POST', body: JSON.stringify(payload) }),
   uploadFile,
   completeUpload: (reelId, assetId, payload) => request(`/${reelId}/assets/${assetId}/complete`, { method: 'POST', body: JSON.stringify(payload) }),

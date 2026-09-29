@@ -44,6 +44,9 @@ export default function Reels({ onToast }) {
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [editForm, setEditForm] = useState(initialForm);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [error, setError] = useState('');
   const [processingMode, setProcessingMode] = useState('polling');
 
@@ -126,6 +129,41 @@ export default function Reels({ onToast }) {
     catch (previewError) { setError(previewError.message); }
   }
 
+  function openEdit(reel) {
+    setError('');
+    setEditing(reel);
+    setEditForm({
+      title: reel.title || '',
+      description: reel.description || '',
+      tags: (reel.tags || []).map((tag) => `#${tag}`).join(' '),
+      shareUrl: reel.shareUrl || '',
+    });
+  }
+
+  async function saveEdit(event) {
+    event.preventDefault();
+    if (!editing) return;
+    if (!editForm.title.trim()) return setError('Add a reel title first.');
+    if (!editForm.shareUrl.trim()) return setError('Add the Instagram or YouTube share link first.');
+    setSavingEdit(true); setError('');
+    try {
+      const response = await reelApi.update(editing.id, {
+        title: editForm.title,
+        description: editForm.description,
+        tags: editForm.tags,
+        shareUrl: editForm.shareUrl,
+      });
+      const updated = response.reel;
+      setReels((current) => current.map((item) => item.id === updated.id
+        ? { ...item, ...updated, asset: item.asset, analytics: item.analytics }
+        : item));
+      setPreview((current) => current?.id === updated.id ? { ...current, ...updated } : current);
+      setEditing(null);
+      onToast?.('Reel details updated. The uploaded video was not changed.');
+    } catch (editError) { setError(editError.message); }
+    finally { setSavingEdit(false); }
+  }
+
   const maxTimelineViews = Math.max(1, ...(analytics?.timeline || []).map((item) => item.views));
 
   return <div className="reels-page">
@@ -169,7 +207,7 @@ export default function Reels({ onToast }) {
             <button className="reel-thumb" style={reel.asset?.thumbnailUrl ? { backgroundImage: `linear-gradient(#0004,#0004), url(${reel.asset.thumbnailUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} onClick={(event) => { event.stopPropagation(); openPreview(reel); }} disabled={!['ready', 'published', 'disabled'].includes(reel.status)}><span>▶</span><small>{duration(reel.durationSeconds)}</small></button>
             <div className="reel-row-copy"><div><h4>{reel.title || 'Untitled reel'}</h4><span className={`reel-status ${reel.status}`}>{statusLabel(reel.status)}{reel.status === 'processing' && reel.asset?.processingPercent ? ` ${Math.round(reel.asset.processingPercent)}%` : ''}</span></div><p>{reel.asset?.errorMessage || reel.description || 'No description added'}</p><div className="reel-tags">{(reel.tags || []).slice(0, 3).map((tag) => <span key={tag}>#{tag}</span>)}</div></div>
             <div className="reel-row-stats"><span><b>{compact.format(reel.analytics?.views || 0)}</b> views</span><span><b>{compact.format(reel.analytics?.likes || 0)}</b> likes</span><span><b>{reel.analytics?.completionRate || 0}%</b> complete</span></div>
-            <div className="reel-row-controls"><label className={`reel-switch ${reel.status === 'published' ? 'on' : ''}`} title={reel.status === 'published' ? 'Disable reel' : reel.status === 'disabled' ? 'Enable reel' : 'Publish reel'}><input type="checkbox" checked={reel.status === 'published'} disabled={!['ready', 'published', 'disabled'].includes(reel.status)} onChange={() => changeStatus(reel)} onClick={(event) => event.stopPropagation()}/><i/></label><button onClick={(event) => { event.stopPropagation(); openPreview(reel); }} disabled={!['ready', 'published', 'disabled'].includes(reel.status)}>Preview</button></div>
+            <div className="reel-row-controls"><label className={`reel-switch ${reel.status === 'published' ? 'on' : ''}`} title={reel.status === 'published' ? 'Disable reel' : reel.status === 'disabled' ? 'Enable reel' : 'Publish reel'}><input type="checkbox" checked={reel.status === 'published'} disabled={!['ready', 'published', 'disabled'].includes(reel.status)} onChange={() => changeStatus(reel)} onClick={(event) => event.stopPropagation()}/><i/></label><button onClick={(event) => { event.stopPropagation(); openEdit(reel); }}>Edit</button><button onClick={(event) => { event.stopPropagation(); openPreview(reel); }} disabled={!['ready', 'published', 'disabled'].includes(reel.status)}>Preview</button></div>
           </article>)}
           {!loading && !reels.length && <div className="reel-empty"><span>▯</span><strong>No reels yet</strong><p>Upload the first short-form video from the studio.</p></div>}
         </div>
@@ -192,5 +230,12 @@ export default function Reels({ onToast }) {
     </section>
 
     {preview && <div className="video-preview-backdrop" onClick={() => setPreview(null)}><section className="reel-preview-modal" onClick={(event) => event.stopPropagation()}><div className="video-preview-header"><div><small>CLOUDFLARE STREAM PREVIEW</small><h2>{preview.title || 'Untitled reel'}</h2></div><button className="video-preview-close" onClick={() => setPreview(null)}>×</button></div>{preview.previewUrl ? <iframe title={`Preview ${preview.title || 'reel'}`} src={preview.previewUrl} allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture" allowFullScreen/> : <video controls autoPlay playsInline preload="metadata" crossOrigin="anonymous" src={preview.playbackUrl}/>}<div className="reel-preview-caption"><p>{preview.description || 'No description'}</p><div>{(preview.tags || []).map((tag) => <span key={tag}>#{tag}</span>)}</div></div></section></div>}
+    {editing && <div className="video-preview-backdrop" onClick={() => !savingEdit && setEditing(null)}><section className="reel-edit-modal" onClick={(event) => event.stopPropagation()}><header><div><small>EDIT REEL DETAILS</small><h2>{editing.title || 'Untitled reel'}</h2><p>The Cloudflare video and upload are not editable here.</p></div><button type="button" onClick={() => setEditing(null)} disabled={savingEdit}>×</button></header><form onSubmit={saveEdit}>
+      <label className="video-field"><span>Reel title</span><input required autoFocus value={editForm.title} onChange={(event) => setEditForm({ ...editForm, title: event.target.value })} maxLength="160"/></label>
+      <label className="video-field"><span>Description <em>optional</em></span><textarea value={editForm.description} onChange={(event) => setEditForm({ ...editForm, description: event.target.value })} maxLength="2200"/></label>
+      <label className="video-field"><span>Hashtags</span><input value={editForm.tags} onChange={(event) => setEditForm({ ...editForm, tags: event.target.value })} placeholder="#metabolism #wellness #nutrition"/></label>
+      <label className="video-field"><span>Share link <em>required · Instagram or YouTube</em></span><input type="url" required value={editForm.shareUrl} onChange={(event) => setEditForm({ ...editForm, shareUrl: event.target.value })} placeholder="https://www.instagram.com/reel/... or https://youtu.be/..."/></label>
+      <footer><button type="button" className="secondary-button" onClick={() => setEditing(null)} disabled={savingEdit}>Cancel</button><button className="save-button" disabled={savingEdit || !editForm.title.trim() || !editForm.shareUrl.trim()}>{savingEdit ? 'Saving…' : 'Save changes'} <b>→</b></button></footer>
+    </form></section></div>}
   </div>;
 }
