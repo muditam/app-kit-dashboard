@@ -21,6 +21,16 @@ button, input { font: inherit; }
 button { color: inherit; }
 .icon { display: block; flex: 0 0 auto; }
 
+.auth-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--cream); }
+.auth-card { width: min(430px, 100%); padding: 34px; border: 1px solid var(--border); border-radius: 18px; background: var(--white); box-shadow: var(--shadow); text-align: center; }
+.auth-card.compact { width: min(300px, 100%); display: grid; justify-items: center; gap: 12px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.auth-card h1 { margin: 8px 0 10px; color: var(--ink); font: 800 24px/1.12 Manrope; letter-spacing: -.04em; }
+.auth-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.auth-card small { display: block; margin-top: 18px; color: #9a8170; font-size: 11px; }
+.auth-mark { width: 46px; height: 46px; margin: 0 auto 18px; display: grid; place-items: center; border-radius: 14px; background: var(--green); color: white; font: 800 18px/1 Manrope; }
+.auth-mark.pulse { margin-bottom: 0; animation: auth-pulse 1.2s ease-in-out infinite alternate; }
+@keyframes auth-pulse { to { opacity: .62; transform: scale(.96); } }
+
 .app-shell { min-height: 100vh; display: flex; }
 .rail { width: 76px; padding: 24px 14px; background: #173a2f; color: white; display: flex; align-items: center; flex-direction: column; position: fixed; inset: 0 auto 0 0; z-index: 20; }
 .brand-mark { width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.2); display: grid; place-items: center; font: 800 21px/1 Manrope; border-radius: 14px; letter-spacing: -2px; }
@@ -28,7 +38,30 @@ button { color: inherit; }
 .rail nav { display: grid; gap: 12px; margin: auto 0; }
 .rail nav button { width: 46px; height: 46px; border: 0; border-radius: 13px; background: transparent; color: rgba(255,255,255,.55); display: grid; place-items: center; cursor: pointer; }
 .rail nav button.active { color: white; background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
-.profile-dot { width: 38px; height: 38px; display: grid; place-items: center; background: #d98754; color: white; font-size: 11px; font-weight: 800; border-radius: 50%; }
+.rail-account { display: grid; gap: 10px; margin-top: auto; }
+.rail-action { width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.14); border-radius: 12px; background: rgba(255,255,255,.07); color: rgba(255,255,255,.78); display: grid; place-items: center; cursor: pointer; transition: .18s ease; }
+.rail-action:hover { background: rgba(255,255,255,.14); color: white; transform: translateY(-1px); }
+.application-switch-backdrop { position: fixed; z-index: 1000; inset: 0; padding: 20px; display: grid; place-items: center; background: rgba(17,38,30,.45); backdrop-filter: blur(3px); }
+.application-switch-modal { width: min(680px, 100%); padding: 22px; border: 1px solid #dfe6dc; border-radius: 18px; background: #fffefa; box-shadow: 0 30px 80px rgba(17,38,30,.25); }
+.application-switch-modal > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.application-switch-modal small { display: block; color: var(--green); font-size: 9px; font-weight: 850; letter-spacing: .12em; }
+.application-switch-modal h2 { margin: 4px 0 0; color: var(--ink); font: 800 22px/1 Manrope; }
+.application-switch-modal > header > button { width: 34px; height: 34px; border: 1px solid #dce5dc; border-radius: 9px; background: #f8faf4; color: #65756c; font-size: 20px; cursor: pointer; }
+.application-switch-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.application-switch-grid > a { min-height: 96px; padding: 14px; display: grid; grid-template-columns: 40px minmax(0,1fr); align-items: center; gap: 3px 12px; border: 1px solid #e4e8df; border-radius: 12px; color: var(--ink); text-decoration: none; background: white; }
+.application-switch-grid > a:hover { border-color: #9fc5ad; background: #f8fbf5; }
+.application-switch-grid > a > span { font-size: 13px; font-weight: 800; }
+.application-switch-grid > a > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.35; }
+.application-switch-grid > a > b { grid-column: 2; color: var(--green); font-size: 9px; }
+.switch-icon { grid-row: 1/4; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; background: var(--green-pale); color: var(--green); font-style: normal; font-size: 17px; font-weight: 800; }
+.switch-icon.ticketing { background: #efe8f6; color: #4d2877; }
+.switch-icon.finance { background: #e8f6ef; color: #16734f; }
+.switch-icon.sales { background: #fff0e6; color: #b45d2b; }
+.switch-icon.app-dashboard { background: #e8edf6; color: #315b9c; }
+.switch-icon.chat-dashboard { background: #eef2ee; color: #4f655c; }
+.switch-icon.admin-access { background: #f1ecf5; color: #5b358b; }
+.switch-icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media(max-width: 560px) { .application-switch-grid { grid-template-columns: 1fr; } }
 
 .workspace { width: calc(100% - 76px); margin-left: 76px; padding: 30px 34px 34px; max-width: 1900px; }
 .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }

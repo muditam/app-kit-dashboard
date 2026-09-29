@@ -10,6 +10,8 @@ import TestimonialVideos from './TestimonialVideos';
 import ProductPricingEditor from './ProductPricingEditor';
 import AICostAnalytics from './AICostAnalytics';
 import { productLinePrice } from './productPricing';
+import { logout } from './auth';
+import ApplicationSwitcher from './ApplicationSwitcher';
 
 const diseaseOptions = [
   { key: 'diabetes', label: 'Diabetes', icon: 'D' },
@@ -48,7 +50,8 @@ function Icon({ name, size = 18 }) {
     video: <><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3V9Z"/></>,
     reel: <><rect x="6" y="2" width="12" height="20" rx="3"/><path d="m10 8 5 4-5 4V8Z"/><path d="M10 5h4"/></>,
     stories: <><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/><path d="m10 9 5 3-5 3V9Z"/></>,
-    cost: <><path d="M12 2v20M17 6.5c0-1.7-2.2-3-5-3s-5 1.3-5 3 2.2 3 5 3 5 1.3 5 3-2.2 3-5 3-5-1.3-5-3"/><path d="M4 20h16"/></>,
+    apps: <><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></>,
+    logout: <><path d="M10 17 15 12 10 7"/><path d="M15 12H3"/><path d="M14 3h4a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-4"/></>,
   };
   return <svg className="icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -112,7 +115,7 @@ function EditorProduct({ item, onQuantity, onRemove }) {
   );
 }
 
-export default function App() {
+export default function App({ user }) {
   const [products, setProducts] = useState([]);
   const [kits, setKits] = useState([]);
   const [editor, setEditor] = useState(blankEditor);
@@ -240,7 +243,7 @@ export default function App() {
     <div className="app-shell">
       <aside className="rail">
         <div className="brand-mark">m<span>u</span></div>
-        <nav><button className={activeView === 'kits' ? 'active' : ''} onClick={() => setActiveView('kits')} aria-label="Kit Studio"><Icon name="grid"/></button><button className={activeView === 'journeys' ? 'active' : ''} onClick={() => setActiveView('journeys')} aria-label="Monthly journeys"><Icon name="timeline"/></button><button className={activeView === 'routing' ? 'active' : ''} onClick={() => setActiveView('routing')} aria-label="Quiz and routing"><Icon name="spark"/></button><button className={activeView === 'rules' ? 'active' : ''} onClick={() => setActiveView('rules')} aria-label="Rules Studio"><Icon name="shield"/></button><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')} aria-label="User assessments"><Icon name="users"/></button>{AI_COST_ANALYTICS_VISIBLE && <button className={activeView === 'costs' ? 'active' : ''} onClick={() => setActiveView('costs')} aria-label="AI cost analytics"><Icon name="cost"/></button>}<button className={activeView === 'videos' ? 'active' : ''} onClick={() => setActiveView('videos')} aria-label="Class video library"><Icon name="video"/></button><button className={activeView === 'reels' ? 'active' : ''} onClick={() => setActiveView('reels')} aria-label="Reels studio"><Icon name="reel"/></button><button className={activeView === 'stories' ? 'active' : ''} onClick={() => setActiveView('stories')} aria-label="Customer story videos"><Icon name="stories"/></button></nav>
+        <nav><button className={activeView === 'kits' ? 'active' : ''} onClick={() => setActiveView('kits')} aria-label="Kit Studio"><Icon name="grid"/></button><button className={activeView === 'journeys' ? 'active' : ''} onClick={() => setActiveView('journeys')} aria-label="Monthly journeys"><Icon name="timeline"/></button><button className={activeView === 'routing' ? 'active' : ''} onClick={() => setActiveView('routing')} aria-label="Quiz and routing"><Icon name="spark"/></button><button className={activeView === 'rules' ? 'active' : ''} onClick={() => setActiveView('rules')} aria-label="Rules Studio"><Icon name="shield"/></button><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')} aria-label="User assessments"><Icon name="users"/></button><button className={activeView === 'videos' ? 'active' : ''} onClick={() => setActiveView('videos')} aria-label="Class video library"><Icon name="video"/></button><button className={activeView === 'reels' ? 'active' : ''} onClick={() => setActiveView('reels')} aria-label="Reels studio"><Icon name="reel"/></button><button className={activeView === 'stories' ? 'active' : ''} onClick={() => setActiveView('stories')} aria-label="Customer story videos"><Icon name="stories"/></button></nav>
         <div className="profile-dot">AN</div>
       </aside>
 
