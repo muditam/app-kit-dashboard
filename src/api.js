@@ -27,4 +27,7 @@ export const api = {
   createRule: (rule) => request('/rules', { method: 'POST', body: JSON.stringify(rule) }),
   updateRule: (id, rule) => request(`/rules/${id}`, { method: 'PATCH', body: JSON.stringify(rule) }),
   getAIUsage: (period = 'month') => request(`/ai-usage?period=${encodeURIComponent(period)}`),
+  getAIChatMembers: (params = {}) => request(`/ai-chat-members?${new URLSearchParams(params).toString()}`),
+  getAIChatMember: (patientId) => request(`/ai-chat-members/${encodeURIComponent(patientId)}`),
+  getAIChatMessages: (conversationId) => request(`/ai-chat-conversations/${encodeURIComponent(conversationId)}/messages`),
 };
