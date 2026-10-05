@@ -246,7 +246,19 @@ export default function App({ user }) {
       <aside className="rail">
         <div className="brand-mark">m<span>u</span></div>
         <nav><button className={activeView === 'kits' ? 'active' : ''} onClick={() => setActiveView('kits')} aria-label="Kit Studio"><Icon name="grid"/></button><button className={activeView === 'journeys' ? 'active' : ''} onClick={() => setActiveView('journeys')} aria-label="Monthly journeys"><Icon name="timeline"/></button><button className={activeView === 'routing' ? 'active' : ''} onClick={() => setActiveView('routing')} aria-label="Quiz and routing"><Icon name="spark"/></button><button className={activeView === 'rules' ? 'active' : ''} onClick={() => setActiveView('rules')} aria-label="Rules Studio"><Icon name="shield"/></button><button className={activeView === 'users' ? 'active' : ''} onClick={() => setActiveView('users')} aria-label="User assessments"><Icon name="users"/></button><button className={activeView === 'appChats' ? 'active' : ''} onClick={() => setActiveView('appChats')} aria-label="Mobile app AI chats"><Icon name="chat"/></button><button className={activeView === 'videos' ? 'active' : ''} onClick={() => setActiveView('videos')} aria-label="Class video library"><Icon name="video"/></button><button className={activeView === 'reels' ? 'active' : ''} onClick={() => setActiveView('reels')} aria-label="Reels studio"><Icon name="reel"/></button><button className={activeView === 'stories' ? 'active' : ''} onClick={() => setActiveView('stories')} aria-label="Customer story videos"><Icon name="stories"/></button></nav>
-        <div className="profile-dot">AN</div>
+        <div className="rail-account">
+          <ApplicationSwitcher
+            user={user}
+            trigger={({ open }) => (
+              <button type="button" className="rail-action" onClick={open} aria-label="All applications" title="All applications">
+                <Icon name="apps" />
+              </button>
+            )}
+          />
+          <button type="button" className="rail-action" onClick={() => void logout()} aria-label="Sign out" title="Sign out">
+            <Icon name="logout" />
+          </button>
+        </div>
       </aside>
 
       <main className="workspace">
