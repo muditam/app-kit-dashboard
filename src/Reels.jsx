@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { reelApi } from './reelApi';
 
 const initialForm = { title: '', description: '', tags: '', shareUrl: '' };
+const MAX_REEL_BYTES = 200 * 1024 * 1024;
 const compact = new Intl.NumberFormat('en-IN', { notation: 'compact', maximumFractionDigits: 1 });
 const statusLabel = (value) => String(value || 'draft').replaceAll('_', ' ');
 const duration = (seconds) => {
@@ -11,6 +12,8 @@ const duration = (seconds) => {
 const watchTime = (seconds) => Number(seconds || 0) >= 3600
   ? `${(Number(seconds) / 3600).toFixed(1)}h`
   : `${Math.round(Number(seconds || 0) / 60)}m`;
+const uploadId = () => globalThis.crypto?.randomUUID?.() || `reel-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const parseTags = (value) => String(value || '').split(/[\s,]+/).map((tag) => tag.replace(/^#/, '').trim()).filter(Boolean);
 
 function readMetadata(file) {
   return new Promise((resolve, reject) => {
@@ -34,6 +37,9 @@ function Metric({ label, value, note, accent = false }) {
 
 export default function Reels({ onToast }) {
   const [reels, setReels] = useState([]);
+  const [trashReels, setTrashReels] = useState([]);
+  const [libraryView, setLibraryView] = useState('library');
+  const [trashLoading, setTrashLoading] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [days, setDays] = useState(30);
@@ -41,14 +47,14 @@ export default function Reels({ onToast }) {
   const [file, setFile] = useState(null);
   const [metadata, setMetadata] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [uploadJobs, setUploadJobs] = useState([]);
   const [preview, setPreview] = useState(null);
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState(initialForm);
   const [savingEdit, setSavingEdit] = useState(false);
   const [error, setError] = useState('');
   const [processingMode, setProcessingMode] = useState('polling');
+  const uploadControls = useRef(new Map());
 
   const selected = reels.find((item) => item.id === selectedId) || null;
   const totals = useMemo(() => reels.reduce((value, reel) => ({
@@ -59,19 +65,39 @@ export default function Reels({ onToast }) {
 
   async function load(preferredId, { silent = false } = {}) {
     if (!silent) setLoading(true);
-    setError('');
+    if (!silent) setError('');
     try {
       const data = await reelApi.list();
       const items = data.reels || [];
       setProcessingMode(data.processingMode || 'polling');
       setReels(items);
+      setUploadJobs((current) => current.filter((job) => !(
+        job.status === 'processing'
+        && job.completed
+        && job.reelId
+        && items.some((item) => item.id === job.reelId)
+      )));
       setSelectedId((current) => preferredId || (items.some((item) => item.id === current) ? current : items[0]?.id || null));
-    } catch (loadError) { setError(loadError.message); }
+      return items;
+    } catch (loadError) { setError(loadError.message); return null; }
     finally { if (!silent) setLoading(false); }
   }
 
+  async function loadTrash({ silent = false } = {}) {
+    if (!silent) setTrashLoading(true);
+    if (!silent) setError('');
+    try {
+      const data = await reelApi.list('trash');
+      setTrashReels(data.reels || []);
+      return data.reels || [];
+    } catch (loadError) { setError(loadError.message); return null; }
+    finally { if (!silent) setTrashLoading(false); }
+  }
+
   useEffect(() => { load(); }, []);
-  const processing = reels.some((reel) => ['uploading', 'processing'].includes(reel.status));
+  useEffect(() => { if (libraryView === 'trash') loadTrash(); }, [libraryView]);
+  const processing = uploadJobs.some((job) => ['starting', 'uploading', 'processing'].includes(job.status))
+    || reels.some((reel) => ['uploading', 'processing'].includes(reel.status));
   useEffect(() => {
     if (!processing) return undefined;
     const timer = window.setInterval(() => load(undefined, { silent: true }), 8000);
@@ -87,31 +113,173 @@ export default function Reels({ onToast }) {
     setFile(selectedFile); setMetadata(null); setError('');
     if (!selectedFile) return;
     if (selectedFile.type && selectedFile.type !== 'video/mp4') return setError('Only MP4 reels are currently supported.');
+    if (selectedFile.size > MAX_REEL_BYTES) {
+      event.target.value = '';
+      setFile(null);
+      return setError('This reel is larger than the 200 MB upload limit.');
+    }
     try { setMetadata(await readMetadata(selectedFile)); }
     catch (metadataError) { setError(metadataError.message); }
   }
 
-  async function submit(event) {
+  function updateUploadJob(id, values) {
+    setUploadJobs((current) => current.map((job) => job.id === id ? { ...job, ...values } : job));
+  }
+
+  async function removeRemoteUpload(jobId, reelId, assetId) {
+    if (!reelId) return;
+    const control = uploadControls.current.get(jobId);
+    if (!control) return;
+    if (!control.cleanupPromise) {
+      control.cleanupPromise = reelApi.cancelUpload(reelId, assetId);
+    }
+    return control.cleanupPromise;
+  }
+
+  async function runUpload(job, uploadFileValue, metadataValue) {
+    const control = uploadControls.current.get(job.id);
+    let reelId = job.reelId || null;
+    let assetId = job.assetId || null;
+    try {
+      const created = await reelApi.create({
+        title: job.title,
+        description: job.description,
+        tags: job.tags,
+        shareUrl: job.shareUrl,
+      });
+      reelId = created.reel.id;
+      updateUploadJob(job.id, { reelId, status: 'uploading' });
+      if (control?.cancelled) {
+        await removeRemoteUpload(job.id, reelId, null);
+        setUploadJobs((current) => current.filter((item) => item.id !== job.id));
+        uploadControls.current.delete(job.id);
+        await load(undefined, { silent: true });
+        return;
+      }
+      const upload = await reelApi.createUpload(reelId, {
+        mimeType: 'video/mp4',
+        sizeBytes: uploadFileValue.size,
+        fileName: uploadFileValue.name,
+      });
+      assetId = upload.asset.id;
+      updateUploadJob(job.id, { assetId });
+      if (control?.cancelled) {
+        await removeRemoteUpload(job.id, reelId, assetId);
+        setUploadJobs((current) => current.filter((item) => item.id !== job.id));
+        uploadControls.current.delete(job.id);
+        await load(undefined, { silent: true });
+        return;
+      }
+      await reelApi.uploadFile(upload.uploadUrl, uploadFileValue, upload.requiredHeaders, (value) => {
+        updateUploadJob(job.id, { progress: value, status: 'uploading' });
+      }, control?.controller.signal);
+      if (control?.cancelled) throw Object.assign(new Error('Upload cancelled'), { name: 'AbortError' });
+      updateUploadJob(job.id, { progress: 100, status: 'finalizing' });
+      await reelApi.completeUpload(reelId, upload.asset.id, metadataValue);
+      updateUploadJob(job.id, { progress: 100, status: 'processing', completed: true });
+      onToast?.(`${job.title || 'Reel'} uploaded. Cloudflare is preparing adaptive video qualities.`);
+      const items = await load(undefined, { silent: true });
+      if (items?.some((item) => item.id === reelId)) {
+        setUploadJobs((current) => current.filter((item) => item.id !== job.id));
+      }
+      uploadControls.current.delete(job.id);
+    } catch (uploadError) {
+      if (control?.cancelled || uploadError.name === 'AbortError') {
+        try {
+          await removeRemoteUpload(job.id, reelId, assetId);
+          setUploadJobs((current) => current.filter((item) => item.id !== job.id));
+          uploadControls.current.delete(job.id);
+          await load(undefined, { silent: true });
+        } catch (cancelError) {
+          updateUploadJob(job.id, { reelId, assetId, status: 'failed', error: `Cancellation failed: ${cancelError.message}` });
+          setError(`${job.title || 'Reel'}: cancellation failed. ${cancelError.message}`);
+        }
+        return;
+      }
+      updateUploadJob(job.id, { reelId, assetId, status: 'failed', error: uploadError.message });
+      setError(`${job.title || 'Reel'}: ${uploadError.message}`);
+    }
+  }
+
+  function cancelUploadJob(job) {
+    const control = uploadControls.current.get(job.id);
+    if (!control || control.cancelled) return;
+    control.cancelled = true;
+    updateUploadJob(job.id, { status: 'cancelling', error: '' });
+    control.controller.abort();
+  }
+
+  async function retryUploadJob(job) {
+    const previous = uploadControls.current.get(job.id);
+    if (!previous?.file || !previous.metadata) return;
+    updateUploadJob(job.id, { status: 'cancelling', error: '' });
+    try {
+      previous.cleanupPromise = null;
+      await removeRemoteUpload(job.id, job.reelId, job.assetId);
+      const retryJob = { ...job, reelId: null, assetId: null, progress: 0, status: 'starting', completed: false, error: '' };
+      const control = { controller: new AbortController(), cancelled: false, cleanupPromise: null, file: previous.file, metadata: previous.metadata };
+      uploadControls.current.set(job.id, control);
+      setUploadJobs((current) => current.map((item) => item.id === job.id ? retryJob : item));
+      void runUpload(retryJob, control.file, control.metadata);
+    } catch (retryError) {
+      previous.cleanupPromise = null;
+      updateUploadJob(job.id, { status: 'failed', error: `Retry cleanup failed: ${retryError.message}` });
+      setError(`${job.title || 'Reel'}: could not clean up the previous upload. ${retryError.message}`);
+    }
+  }
+
+  async function dismissUploadJob(job) {
+    const control = uploadControls.current.get(job.id);
+    if (!control) return setUploadJobs((current) => current.filter((item) => item.id !== job.id));
+    updateUploadJob(job.id, { status: 'cancelling', error: '' });
+    try {
+      control.cleanupPromise = null;
+      await removeRemoteUpload(job.id, job.reelId, job.assetId);
+      setUploadJobs((current) => current.filter((item) => item.id !== job.id));
+      uploadControls.current.delete(job.id);
+      await load(undefined, { silent: true });
+    } catch (dismissError) {
+      control.cleanupPromise = null;
+      updateUploadJob(job.id, { status: 'failed', error: `Cleanup failed: ${dismissError.message}` });
+    }
+  }
+
+  function submit(event) {
     event.preventDefault();
     if (!file || !metadata) return setError('Select a valid MP4 reel first.');
     if (!form.shareUrl.trim()) return setError('Add the Instagram or YouTube share link first.');
-    // React clears currentTarget after the synchronous event handler returns.
-    // Keep the form reference before awaiting the upload requests so the
-    // native file input can be reset after a successful upload.
-    const formElement = event.currentTarget;
-    setSubmitting(true); setProgress(0); setError('');
-    try {
-      const created = await reelApi.create({ ...form, tags: form.tags });
-      const reelId = created.reel.id;
-      const upload = await reelApi.createUpload(reelId, { mimeType: 'video/mp4', sizeBytes: file.size, fileName: file.name });
-      await reelApi.uploadFile(upload.uploadUrl, file, upload.requiredHeaders, setProgress);
-      await reelApi.completeUpload(reelId, upload.asset.id, metadata);
-      setForm(initialForm); setFile(null); setMetadata(null); setProgress(0);
-      formElement.reset();
-      onToast?.('Reel uploaded. Cloudflare is preparing adaptive video qualities.');
-      await load(reelId);
-    } catch (submitError) { setError(submitError.message); }
-    finally { setSubmitting(false); }
+    const job = {
+      id: uploadId(),
+      reelId: null,
+      title: form.title.trim(),
+      description: form.description.trim(),
+      tags: parseTags(form.tags),
+      shareUrl: form.shareUrl.trim(),
+      fileName: file.name,
+      durationSeconds: metadata.durationSeconds,
+      progress: 0,
+      status: 'starting',
+      assetId: null,
+      completed: false,
+      error: '',
+    };
+    const uploadFileValue = file;
+    const metadataValue = metadata;
+
+    uploadControls.current.set(job.id, {
+      controller: new AbortController(),
+      cancelled: false,
+      cleanupPromise: null,
+      file: uploadFileValue,
+      metadata: metadataValue,
+    });
+    setUploadJobs((current) => [job, ...current]);
+    setForm(initialForm);
+    setFile(null);
+    setMetadata(null);
+    setError('');
+    event.currentTarget.reset();
+    void runUpload(job, uploadFileValue, metadataValue);
   }
 
   async function changeStatus(reel) {
@@ -122,6 +290,22 @@ export default function Reels({ onToast }) {
       onToast?.(reel.status === 'published' ? 'Reel disabled' : 'Reel published');
       await load(reel.id);
     } catch (statusError) { setError(statusError.message); }
+  }
+
+  async function trashReel(reel) {
+    try {
+      await reelApi.trash(reel.id);
+      onToast?.('Reel moved to trash');
+      await Promise.all([load(undefined, { silent: true }), loadTrash({ silent: true })]);
+    } catch (trashError) { setError(trashError.message); }
+  }
+
+  async function restoreReel(reel) {
+    try {
+      await reelApi.restore(reel.id);
+      onToast?.('Reel restored to the library');
+      await Promise.all([load(undefined, { silent: true }), loadTrash({ silent: true })]);
+    } catch (restoreError) { setError(restoreError.message); }
   }
 
   async function openPreview(reel) {
@@ -165,6 +349,8 @@ export default function Reels({ onToast }) {
   }
 
   const maxTimelineViews = Math.max(1, ...(analytics?.timeline || []).map((item) => item.views));
+  const libraryItems = libraryView === 'trash' ? trashReels : reels;
+  const libraryLoading = libraryView === 'trash' ? trashLoading : loading;
 
   return <div className="reels-page">
     <section className="reels-hero">
@@ -195,21 +381,28 @@ export default function Reels({ onToast }) {
             <small>{metadata ? `${metadata.width}×${metadata.height} · ${duration(metadata.durationSeconds)}` : '9:16 recommended · H.264/AAC · max 200 MB'}</small>
           </label>
           <div className="video-publish-check"><span><b>Publish when ready</b><small>After Cloudflare finishes processing, use the library switch to publish the reel to the mobile feed.</small></span></div>
-          <div className="video-upload-progress"><i style={{ width: `${progress}%` }}/></div>
-          <button className="save-button video-submit" disabled={submitting || !metadata || !form.shareUrl.trim()}>{submitting ? `Uploading ${progress}%` : 'Upload reel'} <b>→</b></button>
+          <button className="save-button video-submit" disabled={!metadata || !form.shareUrl.trim()}>Upload reel <b>→</b></button>
         </form>
       </aside>
 
       <section className="panel reel-library-card">
-        <div className="reel-section-head"><div><span className="step">02</span><div><small>LIBRARY</small><h3>Published & drafts</h3></div></div><button className="secondary-button" onClick={() => load()} disabled={loading}>Refresh</button></div>
+        <div className="reel-section-head"><div><span className="step">02</span><div><small>LIBRARY</small><h3>{libraryView === 'trash' ? 'Trash' : 'Published & drafts'}</h3></div></div><div className="reel-library-actions"><div className="reel-library-tabs"><button className={libraryView === 'library' ? 'active' : ''} onClick={() => setLibraryView('library')}>Library</button><button className={libraryView === 'trash' ? 'active' : ''} onClick={() => setLibraryView('trash')}>Trash{trashReels.length ? ` (${trashReels.length})` : ''}</button></div><button className="secondary-button" onClick={() => libraryView === 'trash' ? loadTrash() : load()} disabled={libraryLoading}>Refresh</button></div></div>
         <div className="reel-library-list">
-          {loading ? [...Array(4)].map((_, index) => <div className="reel-row-skeleton" key={index}/>) : reels.map((reel) => <article key={reel.id} className={`reel-library-row ${selectedId === reel.id ? 'selected' : ''}`} onClick={() => setSelectedId(reel.id)}>
+          {libraryLoading && !libraryItems.length && (libraryView === 'trash' || !uploadJobs.length) ? [...Array(4)].map((_, index) => <div className="reel-row-skeleton" key={index}/>) : <>
+          {libraryView === 'library' && uploadJobs.map((job) => <article key={job.id} className={`reel-library-row reel-upload-job ${job.status}`}>
+            <div className="reel-thumb reel-upload-job-thumb"><span>{job.status === 'failed' ? '!' : '↑'}</span><small>{duration(job.durationSeconds)}</small></div>
+            <div className="reel-row-copy"><div><h4>{job.title || 'Untitled reel'}</h4><span className={`reel-status ${['starting', 'finalizing', 'cancelling'].includes(job.status) ? 'uploading' : job.status}`}>{job.status === 'starting' ? 'starting' : job.status === 'uploading' ? `uploading ${job.progress}%` : statusLabel(job.status)}</span></div><p>{job.error || (job.status === 'processing' ? 'Upload complete · Cloudflare is preparing video qualities' : job.status === 'finalizing' ? 'Upload complete · confirming with the server' : job.status === 'cancelling' ? 'Stopping upload and cleaning up' : job.fileName)}</p><div className="reel-tags">{job.tags.slice(0, 3).map((tag) => <span key={tag}>#{tag}</span>)}</div><div className="reel-job-progress"><i style={{ width: `${['processing', 'finalizing'].includes(job.status) ? 100 : job.progress}%` }}/></div></div>
+            <div className="reel-upload-state"><b>{['processing', 'finalizing'].includes(job.status) ? '100%' : `${job.progress}%`}</b><span>{job.status === 'failed' ? 'upload failed' : job.status === 'processing' ? 'processing' : job.status === 'cancelling' ? 'cancelling' : 'uploaded'}</span></div>
+            <div className="reel-row-controls reel-job-controls">{['starting', 'uploading'].includes(job.status) && <button className="danger" onClick={() => cancelUploadJob(job)}>Cancel</button>}{job.status === 'failed' && <><button onClick={() => retryUploadJob(job)}>Retry</button><button className="danger" onClick={() => dismissUploadJob(job)}>Dismiss</button></>}</div>
+          </article>)}
+          {libraryItems.filter((reel) => libraryView === 'trash' || !uploadJobs.some((job) => job.reelId === reel.id)).map((reel) => <article key={reel.id} className={`reel-library-row ${libraryView === 'library' && selectedId === reel.id ? 'selected' : ''}`} onClick={() => libraryView === 'library' && setSelectedId(reel.id)}>
             <button className="reel-thumb" style={reel.asset?.thumbnailUrl ? { backgroundImage: `linear-gradient(#0004,#0004), url(${reel.asset.thumbnailUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} onClick={(event) => { event.stopPropagation(); openPreview(reel); }} disabled={!['ready', 'published', 'disabled'].includes(reel.status)}><span>▶</span><small>{duration(reel.durationSeconds)}</small></button>
             <div className="reel-row-copy"><div><h4>{reel.title || 'Untitled reel'}</h4><span className={`reel-status ${reel.status}`}>{statusLabel(reel.status)}{reel.status === 'processing' && reel.asset?.processingPercent ? ` ${Math.round(reel.asset.processingPercent)}%` : ''}</span></div><p>{reel.asset?.errorMessage || reel.description || 'No description added'}</p><div className="reel-tags">{(reel.tags || []).slice(0, 3).map((tag) => <span key={tag}>#{tag}</span>)}</div></div>
             <div className="reel-row-stats"><span><b>{compact.format(reel.analytics?.views || 0)}</b> views</span><span><b>{compact.format(reel.analytics?.likes || 0)}</b> likes</span><span><b>{reel.analytics?.completionRate || 0}%</b> complete</span></div>
-            <div className="reel-row-controls"><label className={`reel-switch ${reel.status === 'published' ? 'on' : ''}`} title={reel.status === 'published' ? 'Disable reel' : reel.status === 'disabled' ? 'Enable reel' : 'Publish reel'}><input type="checkbox" checked={reel.status === 'published'} disabled={!['ready', 'published', 'disabled'].includes(reel.status)} onChange={() => changeStatus(reel)} onClick={(event) => event.stopPropagation()}/><i/></label><button onClick={(event) => { event.stopPropagation(); openEdit(reel); }}>Edit</button><button onClick={(event) => { event.stopPropagation(); openPreview(reel); }} disabled={!['ready', 'published', 'disabled'].includes(reel.status)}>Preview</button></div>
+            <div className="reel-row-controls">{libraryView === 'trash' ? <button onClick={(event) => { event.stopPropagation(); restoreReel(reel); }}>Restore</button> : <><label className={`reel-switch ${reel.status === 'published' ? 'on' : ''}`} title={reel.status === 'published' ? 'Disable reel' : reel.status === 'disabled' ? 'Enable reel' : 'Publish reel'}><input type="checkbox" checked={reel.status === 'published'} disabled={!['ready', 'published', 'disabled'].includes(reel.status)} onChange={() => changeStatus(reel)} onClick={(event) => event.stopPropagation()}/><i/></label><button onClick={(event) => { event.stopPropagation(); openEdit(reel); }}>Edit</button><button onClick={(event) => { event.stopPropagation(); openPreview(reel); }} disabled={!['ready', 'published', 'disabled'].includes(reel.status)}>Preview</button>{['draft', 'processing', 'ready', 'failed'].includes(reel.status) && <button className="danger" onClick={(event) => { event.stopPropagation(); trashReel(reel); }}>Trash</button>}</>}</div>
           </article>)}
-          {!loading && !reels.length && <div className="reel-empty"><span>▯</span><strong>No reels yet</strong><p>Upload the first short-form video from the studio.</p></div>}
+          </>}
+          {!libraryLoading && !libraryItems.length && (libraryView === 'trash' || !uploadJobs.length) && <div className="reel-empty"><span>▯</span><strong>{libraryView === 'trash' ? 'Trash is empty' : 'No reels yet'}</strong><p>{libraryView === 'trash' ? 'Unpublished reels moved to trash will appear here.' : 'Upload the first short-form video from the studio.'}</p></div>}
         </div>
       </section>
     </section>
