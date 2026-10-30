@@ -1,5 +1,5 @@
-const DEFAULT_SHIPTRACK_API_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname) ? '/shiptrack-api' : 'http://localhost:4000';
-const SHIPTRACK_API_URL = (import.meta.env.VITE_SHIPTRACK_API_URL || DEFAULT_SHIPTRACK_API_URL).replace(/\/$/, '');
+const DEFAULT_SHIPTRACK_API_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname) ? '/shiptrack-api' : 'https://shiptrack-api.60brands.com';
+export const SHIPTRACK_API_URL = (import.meta.env.VITE_SHIPTRACK_API_URL || DEFAULT_SHIPTRACK_API_URL).replace(/\/$/, '');
 const DEFAULT_LOGIN_URL = window.location.hostname.endsWith('60brands.com') ? 'https://login.60brands.com/login' : 'http://localhost:3000/login';
 const LOGIN_URL = (import.meta.env.VITE_LOGIN_URL || DEFAULT_LOGIN_URL).replace(/\/$/, '');
 const APPS_URL = (import.meta.env.VITE_APPS_URL || new URL('/apps', LOGIN_URL).toString()).replace(/\/$/, '');
